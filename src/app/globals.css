@@ -2,3 +2,167 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Light Theme */
+  --header-bg: linear-gradient(to right, #b72a35, #f15a5a);
+  --header-text: #ffffff;
+  --content-bg: #f4f4f4;
+  --content-text: #333;
+  
+  /* Light Theme for Cards */
+  --card-bg: #ffffff;
+  --card-hover-bg: #ffffff;
+  --card-text: #333;
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --card-hover-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  
+  /* Hero Section */
+  --hero-bg: linear-gradient(to right, #b72a35, #f15a5a);
+  --hero-text: #ffffff;
+
+  /* Footer Theme - Light */
+  --footer-bg: #ffffff;
+  --footer-text: #333;
+  --footer-border: #e5e7eb;
+  --footer-link: #b72a35;
+  --footer-link-hover: #f15a5a;
+  --footer-muted: #666666;
+}
+
+.dark {
+  /* Dark Theme */
+  --header-bg: linear-gradient(to right, #1a1a1a, #2d2d2d);
+  --header-text: #ffffff;
+  --content-bg: #111111;
+  --content-text: #ffffff;
+  
+  /* Dark Theme for Cards */
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-hover-bg: rgba(255, 255, 255, 0.08);
+  --card-text: #ffffff;
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  --card-hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  
+  /* Hero Section */
+  --hero-bg: linear-gradient(to right, #1a1a1a, #2d2d2d);
+  --hero-text: #ffffff;
+
+  /* Footer Theme - Dark */
+  --footer-bg: #1a1a1a;
+  --footer-text: #ffffff;
+  --footer-border: #333333;
+  --footer-link: #f15a5a;
+  --footer-link-hover: #ff7a7a;
+  --footer-muted: #999999;
+}
+
+/* Base Styles */
+body {
+  background: var(--content-bg);
+  color: var(--content-text);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Hero Section */
+.hero-section {
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  min-height: 400px;
+  padding: 4rem 2rem;
+  text-align: center;
+  transition: background 0.3s ease;
+}
+
+.hero-section h1 {
+  font-size: 3rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Styles */
+@layer components {
+  .card {
+    @apply relative p-6 rounded-xl backdrop-blur-sm;
+    background: var(--card-bg);
+    color: var(--card-text);
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    @apply transform scale-[1.02];
+    background: var(--card-hover-bg);
+    box-shadow: var(--card-hover-shadow);
+  }
+
+  .card-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto;
+  }
+
+  /* Footer Styles */
+  .footer {
+    @apply w-full py-8 px-4 mt-auto;
+    background: var(--footer-bg);
+    color: var(--footer-text);
+    border-top: 1px solid var(--footer-border);
+    transition: all 0.3s ease;
+  }
+
+  .footer-container {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .footer-grid {
+    @apply grid grid-cols-1 md:grid-cols-4 gap-8;
+  }
+
+  .footer-heading {
+    @apply text-lg font-semibold mb-4;
+    color: var(--footer-text);
+  }
+
+  .footer-text {
+    color: var(--footer-muted);
+    @apply text-sm leading-relaxed;
+  }
+
+  .footer-link {
+    @apply block text-sm transition-colors duration-200;
+    color: var(--footer-link);
+  }
+
+  .footer-link:hover {
+    color: var(--footer-link-hover);
+  }
+
+  .footer-social {
+    @apply flex items-center gap-2 text-sm transition-colors duration-200;
+    color: var(--footer-link);
+  }
+
+  .footer-social:hover {
+    color: var(--footer-link-hover);
+  }
+
+  .footer-divider {
+    @apply my-8 border-t;
+    border-color: var(--footer-border);
+  }
+
+  .footer-copyright {
+    @apply text-sm text-center;
+    color: var(--footer-muted);
+  }
+}

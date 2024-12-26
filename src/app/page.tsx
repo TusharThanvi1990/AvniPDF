@@ -1,15 +1,16 @@
-'use client'
+// src/pages/Home.tsx
+'use client';
 
-import React, { useState } from 'react'
-import FileUpload from '../../components/TextExtractor'
+import React from 'react';
+import Hero from '../../components/Hero';
 
-export default function Home() {
-  
-
+const Home = () => {
   return (
-    <div >
-      <FileUpload />
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <Hero />
     </div>
-  )
-}
+  );
+};
 
+export default Home;
