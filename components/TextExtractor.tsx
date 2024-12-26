@@ -1,16 +1,15 @@
-// PDFEditor.tsx
-
-'use client'
-
 import * as pdfjsLib from 'pdfjs-dist'
 import { useState, useRef, useEffect } from 'react'
-import PDFRenderer from './PDFRenderer' // Import the new PDFRenderer component
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib' // Import pdf-lib
+import PDFRenderer from './PDFRenderer'
+import Button from './Button'
 
 export default function PDFEditor() {
   const [pdfData, setPdfData] = useState<any[]>([])
   const [jsonData, setJsonData] = useState<string>('')
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
+  const originalPdfBytes = useRef<Uint8Array | null>(null) // Store original PDF data
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -25,6 +24,7 @@ export default function PDFEditor() {
     const fileReader = new FileReader()
     fileReader.onload = async () => {
       const pdfData = new Uint8Array(fileReader.result as ArrayBuffer)
+      originalPdfBytes.current = pdfData // Save original PDF data for later
 
       try {
         const pdfDoc = await pdfjsLib.getDocument(pdfData).promise
@@ -48,7 +48,7 @@ export default function PDFEditor() {
               height: item.height,
               fontName: item.fontName,
               fontSize: item.height,
-            }))
+            })),
           }
 
           pdfContent.push(pageData)
@@ -64,8 +64,8 @@ export default function PDFEditor() {
     fileReader.readAsArrayBuffer(file)
   }
 
-  const handleZoomIn = () => setScale(prevScale => prevScale + 0.1)
-  const handleZoomOut = () => setScale(prevScale => Math.max(0.1, prevScale - 0.1))
+  const handleZoomIn = () => setScale((prevScale) => prevScale + 0.1)
+  const handleZoomOut = () => setScale((prevScale) => Math.max(0.1, prevScale - 0.1))
 
   const handleContentChange = (pageIndex: number, elementIndex: number, newContent: string) => {
     const newPdfData = [...pdfData]
@@ -74,41 +74,85 @@ export default function PDFEditor() {
     setJsonData(JSON.stringify(newPdfData, null, 2))
   }
 
-  const handleDownload = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonData)
+  const handleDownloadJSON = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(jsonData)
     const downloadAnchorNode = document.createElement('a')
-    downloadAnchorNode.setAttribute("href", dataStr)
-    downloadAnchorNode.setAttribute("download", "pdf_content.json")
+    downloadAnchorNode.setAttribute('href', dataStr)
+    downloadAnchorNode.setAttribute('download', 'pdf_content.json')
     document.body.appendChild(downloadAnchorNode)
     downloadAnchorNode.click()
     downloadAnchorNode.remove()
   }
 
+  const handleDownloadPDF = async () => {
+    if (!originalPdfBytes.current) return
+    const pdfDoc = await PDFDocument.load(originalPdfBytes.current)
+
+    for (const page of pdfData) {
+      const pdfPage = pdfDoc.getPage(page.pageNumber - 1)
+
+      for (const element of page.elements) {
+        if (element.type === 'text') {
+          pdfPage.drawText(element.content, {
+            x: element.x,
+            y: element.y,
+            size: element.fontSize,
+            font: await pdfDoc.embedFont(StandardFonts.Helvetica),
+            color: rgb(0, 0, 0),
+          })
+        }
+      }
+    }
+
+    const pdfBytes = await pdfDoc.save()
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    const downloadLink = document.createElement('a')
+    downloadLink.href = URL.createObjectURL(blob)
+    downloadLink.download = 'edited_pdf.pdf'
+    document.body.appendChild(downloadLink)
+    downloadLink.click()
+    downloadLink.remove()
+  }
+
   return (
-    <div className="p-4 font-sans">
-      <h1 className="text-2xl font-bold mb-4">Editable PDF Viewer</h1>
-      <input 
-        type="file" 
-        onChange={handleUpload} 
-        accept="application/pdf" 
-        className="mb-4 block w-full"
-      />
-      
-      <div className="mb-4 space-x-2">
-        <button onClick={handleZoomIn} className="px-3 py-1 bg-blue-500 text-white rounded">Zoom In</button>
-        <button onClick={handleZoomOut} className="px-3 py-1 bg-blue-500 text-white rounded">Zoom Out</button>
-        <button onClick={handleDownload} className="px-3 py-1 bg-green-500 text-white rounded">Download JSON</button>
+    <div className="p-6 font-sans text-[var(--content-text)] bg-[var(--content-bg)] transition-colors duration-300 min-h-screen">
+      <h1 className="text-3xl font-bold mb-6 text-center">Editable PDF Viewer</h1>
+
+      <div className="flex flex-col items-center">
+        <label
+          htmlFor="file-upload"
+          className="mb-4 cursor-pointer bg-gradient-to-r from-green-500 to-teal-600 text-white px-5 py-2 rounded shadow hover:scale-105 transition-transform"
+        >
+          Upload PDF
+        </label>
+        <input
+          id="file-upload"
+          type="file"
+          onChange={handleUpload}
+          accept="application/pdf"
+          className="hidden"
+        />
       </div>
 
-      <h2 className="text-xl font-semibold mb-2">Extracted JSON Data</h2>
-      <pre className="bg-gray-100 p-4 rounded-md overflow-auto mb-4 text-sm">
-        {jsonData}
-      </pre>
+      <div className="flex justify-center mt-6">
+        <Button onClick={handleZoomIn} className="mr-4 px-3">
+          +
+        </Button>
+        <Button onClick={handleZoomOut} className="mr-4">
+          -
+        </Button>
+        <Button onClick={handleDownloadJSON} className="mr-4">
+          Download JSON
+        </Button>
+        <Button onClick={handleDownloadPDF} className="bg-red-500">
+          Download PDF
+        </Button>
+      </div>
 
-      <h2 className="text-xl font-semibold mb-2">Rendered PDF Content</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-4">Rendered PDF Content</h2>
       <div
         ref={containerRef}
-        className="border border-gray-300 bg-white p-4 rounded-md shadow-md overflow-auto"
+        className="border border-gray-300 bg-[var(--card-bg)] text-[var(--card-text)] p-4 rounded-md shadow-md overflow-auto"
       >
         <PDFRenderer
           jsonData={jsonData}

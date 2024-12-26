@@ -17,6 +17,9 @@ const PDFRenderer: React.FC<PDFRendererProps> = ({ jsonData, scale, handleConten
     return null;
   }
 
+  // Detect dark mode based on user's system preference
+  const darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {parsedData.map((page: any, pageIndex: number) => (
@@ -28,7 +31,7 @@ const PDFRenderer: React.FC<PDFRendererProps> = ({ jsonData, scale, handleConten
             height: `${page.height * scale}px`,
             border: '1px solid #ddd',
             marginBottom: '20px',
-            backgroundColor: '#ffffff',
+            backgroundColor: darkMode ? '#222' : '#ffffff', // Set background color based on theme
             overflow: 'hidden', // Ensure content doesn't spill outside
           }}
         >
@@ -58,6 +61,7 @@ const PDFRenderer: React.FC<PDFRendererProps> = ({ jsonData, scale, handleConten
                 zIndex: elementIndex, // Correct stacking order
                 transition: 'border-color 0.3s',
                 cursor: 'text',
+                color: darkMode ? '#fff' : '#000', // Set text color based on theme
               }}
             >
               {item.content}
