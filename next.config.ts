@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-};
+  webpack: (config:any) => {
+    config.resolve.alias.canvas = false;
+    config.resolve.alias.fs = false;
+    return config;
+  },
+}
 
-export default nextConfig;
+module.exports = nextConfig;

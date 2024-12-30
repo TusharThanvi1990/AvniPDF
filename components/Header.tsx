@@ -11,10 +11,10 @@ const Header = () => {
         color: "var(--header-text)",
       }}
     >
-      <div className="font-bold text-xl">Avni PDF</div>
+      <Link href="/"><div className="font-bold text-xl">Avni PDF</div> </Link>
       <nav className="flex gap-4">
         <Link href="/login">Login</Link>
-        <Link href="/home">Home</Link>
+        <Link href="/">Home</Link>
         <Link href="/about-us">About Us</Link>
       </nav>
       <ThemeToggle />
