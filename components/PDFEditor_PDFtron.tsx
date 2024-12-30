@@ -1,6 +1,9 @@
+"use client";
 import React, { useEffect, useRef, useState } from 'react';
 import type { WebViewerInstance } from '@pdftron/webviewer';
 import WebViewer from '@pdftron/webviewer';
+
+
 
 export default function PDFTronEditor() {
   const viewerRef = useRef<HTMLDivElement>(null);
