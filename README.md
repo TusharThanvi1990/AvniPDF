@@ -48,7 +48,7 @@ Steps
 
 Clone the repository:
 
-git clone https://github.com/your-username/avni-pdf.git
+git clone https://github.com/TusharThanvi1990/avni-pdf.git
 cd avni-pdf
 
 Install dependencies:
