@@ -43,48 +43,6 @@ const AboutUs: React.FC = () => {
     // Register ScrollTrigger
     gsap.registerPlugin(ScrollTrigger);
   
-    // // Hero Animation
-    // if (sectionRefs.hero.current) {
-    //   gsap.from(sectionRefs.hero.current, {
-    //     opacity: 0,
-    //     y: 100,
-    //     duration: 1,
-    //     ease: "power4.out"
-    //   });
-    // }
-  
-    // // Story Section Animation
-    // if (sectionRefs.story.current) {
-    //   gsap.from(sectionRefs.story.current.children, {
-    //     scrollTrigger: {
-    //       trigger: sectionRefs.story.current,
-    //       start: "top center",
-    //       end: "bottom center",
-    //     },
-    //     y: 50,
-    //     opacity: 0,
-    //     duration: 0.8,
-    //     stagger: 0.2,
-    //     ease: "power3.out"
-    //   });
-    // }
-  
-    // // Passion Section Animation
-    // if (sectionRefs.passion.current) {
-    //   gsap.from(sectionRefs.passion.current.children, {
-    //     scrollTrigger: {
-    //       trigger: sectionRefs.passion.current,
-    //       start: "top center",
-    //     },
-    //     scale: 0.8,
-    //     opacity: 0,
-    //     duration: 0.6,
-    //     stagger: 0.15,
-    //     ease: "back.out(1.7)"
-    //   });
-    // }
-  
-    // Skills Animation (already working fine)
     if (sectionRefs.skills.current) {
       const skillCards = sectionRefs.skills.current.querySelectorAll('.skill-card');
   
@@ -111,7 +69,7 @@ const AboutUs: React.FC = () => {
           },
           ease: "power3.out"
         }
-      );
+      );[]
     }
   
     // Ensure animations work when returning to the page (on page change)
@@ -207,7 +165,7 @@ const AboutUs: React.FC = () => {
             </div>
             <div className="backdrop-blur-sm bg-opacity-10 bg-white p-6 rounded-xl shadow-lg">
               <p className="text-lg leading-relaxed">
-                What started as a college project evolved into <span className="font-semibold">Avni PDF</span> - our answer to the complex world of document management. We're not just building a tool; we're crafting an experience that makes document handling a breeze for everyone.
+                What started as a college project evolved into <span className="font-semibold">Avni PDF</span> - our answer to the complex world of document management. We&apos;re not just building a tool; we&apos;re crafting an experience that makes document handling a breeze for everyone.
               </p>
             </div>
           </div>
@@ -231,12 +189,12 @@ const AboutUs: React.FC = () => {
             <div className="backdrop-blur-md bg-opacity-20 bg-white p-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300">
               <Heart className="w-12 h-12 mb-4" />
               <h3 className="text-xl font-bold mb-4">Passion</h3>
-              <p>With a perfect blend of engineering precision and creative flair, we're building tools that people actually enjoy using.</p>
+              <p>With a perfect blend of engineering precision and creative flair, we&apos;re building tools that people actually enjoy using.</p>
             </div>
             <div className="backdrop-blur-md bg-opacity-20 bg-white p-8 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300">
               <Rocket className="w-12 h-12 mb-4" />
               <h3 className="text-xl font-bold mb-4">Growth</h3>
-              <p>Every challenge is a learning opportunity. We're constantly evolving, improving, and pushing our limits.</p>
+              <p>Every challenge is a learning opportunity. We&apos;re constantly evolving, improving, and pushing our limits.</p>
             </div>
           </div>
         </div>
@@ -281,9 +239,9 @@ const AboutUs: React.FC = () => {
       {/* Call to Action */}
 <section className="py-20 px-4 text-center" style={{ background: 'var(--hero-bg)' }}>
   <div className="max-w-3xl mx-auto">
-    <h2 className="text-4xl font-bold mb-6 text-white">Let's Create Something Amazing</h2>
+    <h2 className="text-4xl font-bold mb-6 text-white">Let&apo;s Create Something Amazing</h2>
     <p className="text-xl text-gray-200 mb-8">
-      Whether you're looking to collaborate or just want to chat about tech, we'd love to connect!
+      Whether you&apos;re looking to collaborate or just want to chat about tech, we'd love to connect!
     </p>
     <a href="mailto:tushar.thanvi2005@gmail.com">
       <button className="px-8 py-3 bg-white text-gray-900 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300">
