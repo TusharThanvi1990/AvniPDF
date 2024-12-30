@@ -31,8 +31,7 @@ export default function PDFTronEditor() {
         }, viewerRef.current);
 
         viewerInstance.current = instance;
-        //@ts-expect-error
-        //type error to be excuded for time being
+        //@ts-expect-error: Type inference issue with `instance.Core`
         const { UI, documentViewer, annotationManager } = instance.Core;
 
         // Wait for viewer to be ready

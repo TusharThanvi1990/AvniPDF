@@ -69,7 +69,7 @@ const AboutUs: React.FC = () => {
           },
           ease: "power3.out"
         }
-      );[]
+      );
     }
   
     // Ensure animations work when returning to the page (on page change)
@@ -241,7 +241,7 @@ const AboutUs: React.FC = () => {
   <div className="max-w-3xl mx-auto">
     <h2 className="text-4xl font-bold mb-6 text-white">Let&apo;s Create Something Amazing</h2>
     <p className="text-xl text-gray-200 mb-8">
-      Whether you&apos;re looking to collaborate or just want to chat about tech, we'd love to connect!
+      Whether you&apos;re looking to collaborate or just want to chat about tech, we&apos;d love to connect!
     </p>
     <a href="mailto:tushar.thanvi2005@gmail.com">
       <button className="px-8 py-3 bg-white text-gray-900 rounded-lg font-semibold transform hover:scale-105 transition-all duration-300">
