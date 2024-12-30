@@ -1,17 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Construction, Sparkles, Coffee, Code, Brush, Rocket } from 'lucide-react';
 
 const ComingSoon = () => {
-  // State to ensure client-side rendering
-  const [isClient, setIsClient] = useState(false);
 
-  // Effect to check if we're on the client-side
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Variants for animations
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -117,31 +109,29 @@ const ComingSoon = () => {
         </motion.p>
 
         {/* Development Progress Visualization */}
-        {isClient && (
-          <motion.div
-            className="mb-12 relative"
-            variants={itemVariants}
+        <motion.div
+          className="mb-12 relative"
+          variants={itemVariants}
+        >
+          <div 
+            className="w-full max-w-md mx-auto h-3 rounded-full overflow-hidden"
+            style={{ background: 'var(--card-bg)' }}
           >
-            <div 
-              className="w-full max-w-md mx-auto h-3 rounded-full overflow-hidden"
-              style={{ background: 'var(--card-bg)' }}
-            >
-              <motion.div
-                className="h-full rounded-full"
-                style={{ background: 'var(--footer-link)' }}
-                animate={{
-                  x: ["-100%", "100%"],
-                  opacity: [0.5, 1, 0.5]
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2,
-                  ease: "easeInOut"
-                }}
-              />
-            </div>
-          </motion.div>
-        )}
+            <motion.div
+              className="h-full rounded-full"
+              style={{ background: 'var(--footer-link)' }}
+              animate={{
+                x: ["-100%", "100%"],
+                opacity: [0.5, 1, 0.5]
+              }}
+              transition={{
+                repeat: Infinity,
+                duration: 2,
+                ease: "easeInOut"
+              }}
+            />
+          </div>
+        </motion.div>
 
         {/* Development Stages */}
         <motion.div

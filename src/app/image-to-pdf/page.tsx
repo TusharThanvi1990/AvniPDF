@@ -1,7 +1,11 @@
-'use client'
+'use client';
 
+import dynamic from 'next/dynamic';
 
-import ComingSoon from '../../../components/Comingsoon'
+// Dynamically import the PDFTronEditor component with SSR disabled
+const ComingSoon = dynamic(() => import('../../../components/Comingsoon'), { 
+  ssr: false 
+});
 
 export default function Home() {
 
