@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import mammoth from 'mammoth';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument,  StandardFonts } from 'pdf-lib';
 import { motion } from 'framer-motion';
-import { useTheme } from '../Context/ThemeContext';
+
 const WordToPdfConverter = () => {
-  const { theme } = useTheme();
   const [file, setFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<Uint8Array | null>(null);
   const [error, setError] = useState('');
   const [previewText, setPreviewText] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -25,7 +24,7 @@ const WordToPdfConverter = () => {
           const { value } = await mammoth.extractRawText({ arrayBuffer });
           setPreviewText(value.slice(0, 500));
         } catch (err) {
-          setPreviewText('Failed to preview document.');
+          setPreviewText('Failed to preview document.' + err);
         }
       };
       reader.readAsArrayBuffer(selectedFile);
@@ -117,7 +116,6 @@ const WordToPdfConverter = () => {
           // Handle headers
           if (/^h[1-6]$/i.test(element.tagName)) {
             yPosition -= lineHeight;
-            const headerSize = 20 - (parseInt(element.tagName[1]) * 2);
             processText(element.textContent || '', indent);
             yPosition -= lineHeight;
             return;

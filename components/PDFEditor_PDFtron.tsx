@@ -32,6 +32,7 @@ export default function PDFTronEditor() {
 
         viewerInstance.current = instance;
         //@ts-expect-error
+        //type error to be excuded for time being
         const { UI, documentViewer, annotationManager } = instance.Core;
 
         // Wait for viewer to be ready
