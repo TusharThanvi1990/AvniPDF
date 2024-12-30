@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
     for (let i = 1; i <= numPages; i++) {
       const page = await pdfDoc.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      const pageText = textContent.items.map((item) => {
+        if ('str' in item) {
+          return item.str;
+        } else {
+          return ''; // or some other default value
+        }
+      }).join(' ');
       extractedText += pageText + '\n';
     }
 

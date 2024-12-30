@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Command, Code, Heart, Cpu, Brain, Rocket, Coffee } from 'lucide-react';
+import { Code, Heart,  Brain, Rocket, Coffee } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 import { 

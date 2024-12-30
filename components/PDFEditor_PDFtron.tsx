@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { WebViewerInstance } from '@pdftron/webviewer';
 import WebViewer from '@pdftron/webviewer';
-import { useTheme } from '../Context/ThemeContext';
 
 export default function PDFTronEditor() {
   const viewerRef = useRef<HTMLDivElement>(null);
@@ -32,7 +31,7 @@ export default function PDFTronEditor() {
         }, viewerRef.current);
 
         viewerInstance.current = instance;
-        //@ts-ignore
+        //@ts-expect-error
         const { UI, documentViewer, annotationManager } = instance.Core;
 
         // Wait for viewer to be ready

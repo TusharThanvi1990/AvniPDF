@@ -7,10 +7,9 @@ interface CardProps {
   link: string;
   description?: string;
   icon?: React.ReactNode;
-  isComingSoon?: boolean;
 }
 
-const Card = ({ title, link, description, icon, isComingSoon = false }: CardProps) => {
+const Card = ({ title, link, description, icon,}: CardProps) => {
   return (
     <Link 
       href={link}

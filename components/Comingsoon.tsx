@@ -1,10 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '../Context/ThemeContext';
 import { Construction, Sparkles, Coffee, Code, Brush, Rocket } from 'lucide-react';
 
 const ComingSoon = () => {
-  const { theme } = useTheme();
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },

@@ -2,10 +2,9 @@
 import React, { useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import { motion } from "framer-motion";
-import { useTheme } from "../Context/ThemeContext";
+
 
 const CompressPDF = () => {
-  const { theme } = useTheme();
   const [file, setFile] = useState<File | null>(null);
   const [compressedFile, setCompressedFile] = useState<Blob | null>(null);
   const [compressionLevel, setCompressionLevel] = useState<number>(50);

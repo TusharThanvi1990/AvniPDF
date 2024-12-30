@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '../Context/ThemeContext';
 
 const PdfToWordConverter = () => {
-  const { theme } = useTheme();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [wordFile, setWordFile] = useState<Blob | null>(null);
   const [error, setError] = useState('');

@@ -3,15 +3,12 @@
 import React, { useEffect } from 'react';
 import { gsap } from 'gsap';
 import { TextPlugin } from 'gsap/TextPlugin';
-import { useTheme } from '../Context/ThemeContext';
 import Card from './Card';
-import { FileText, Image, Merge, Compass, Edit, File } from 'lucide-react';
 
 // Register the plugin
 gsap.registerPlugin(TextPlugin);
 
 const Hero = () => {
-  const { theme } = useTheme();
 
   const cards = [
     { title: 'PDF Editor', link: '/pdf-editor',},
