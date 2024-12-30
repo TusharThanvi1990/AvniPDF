@@ -13,7 +13,7 @@ export default function PDFTronEditor() {
 
   useEffect(() => {
     const initializeViewer = async () => {
-      if (!viewerRef.current || viewerInstance.current) return;
+      if (typeof window === 'undefined' || !viewerRef.current || viewerInstance.current) return;
 
       try {
         // Clear any existing content
