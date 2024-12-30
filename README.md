@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Avni PDF - Comprehensive PDF Utility Application
 
-## Getting Started
+Overview
 
-First, run the development server:
+Avni PDF is a robust and versatile PDF utility application designed to streamline and enhance PDF file management. Whether you need to compress, convert, or manipulate PDF documents, Avni PDF provides user-friendly features with modern UI components to simplify your workflow.
 
-```bash
+Features
+
+1. Compress PDF Files
+
+Reduce the file size of your PDF documents while maintaining quality.
+
+Adjustable compression levels for customized results.
+
+Instant file size comparison before and after compression.
+
+Easy-to-use interface for uploading, compressing, and downloading files.
+
+2. Word to PDF Conversion
+
+Easily convert Word documents (.docx) into high-quality PDF files.
+
+Supports text formatting, headers, and paragraphs.
+
+Real-time document preview for accuracy.
+
+Converts complex Word structures into clean PDF layouts.
+
+3. User-Friendly Interface
+
+Avni PDF integrates a modern design using:
+
+Framer Motion for smooth animations.
+
+Customizable themes with light and dark modes.
+
+Installation and Setup
+
+Prerequisites
+
+Ensure you have the following installed:
+
+Node.js (v14 or higher)
+
+npm (v6 or higher)
+
+Steps
+
+Clone the repository:
+
+git clone https://github.com/your-username/avni-pdf.git
+cd avni-pdf
+
+Install dependencies:
+
+npm install
+
+Start the development server:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the application in your browser at http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Compressing PDF Files
 
-## Learn More
+Upload a PDF file using the "Choose File" button.
 
-To learn more about Next.js, take a look at the following resources:
+Adjust the compression level using the slider.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Click the "Compress PDF" button to generate the compressed file.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Download the compressed file by clicking "Download Compressed PDF."
 
-## Deploy on Vercel
+Converting Word to PDF
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Upload a Word (.docx) file.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Preview the content in the app.
+
+Click the "Convert to PDF" button to generate the PDF.
+
+Download the converted PDF.
+
+Technologies Used
+
+React: For building a dynamic front-end interface.
+
+Next.js: For server-side rendering and application structure.
+
+pdf-lib: To manipulate PDF files.
+
+mammoth.js: For converting Word documents to HTML before PDF generation.
+
+Framer Motion: For animations.
+
+Tailwind CSS: For styling the application.
+
+Contribution
+
+We welcome contributions! Follow these steps to contribute:
+
+Fork the repository.
+
+Create a feature branch:
+
+git checkout -b feature/your-feature-name
+
+Commit your changes:
+
+git commit -m "Add your feature"
+
+Push to your forked repository:
+
+git push origin feature/your-feature-name
+
+Submit a pull request.
+
+License
+
+This project is licensed under the Apache License 2.0. See the LICENSE file for details.
+
+Contact
+
+For queries or support, reach out via email:
+
+Tushar [tushar.thanvi2005@gmail.com]
+
