@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import ImageToText from '../../../components/ImageToText';
 
 // Dynamically import the PDFTronEditor component with SSR disabled
 const ComingSoon = dynamic(() => import('../../../components/Comingsoon'), { 
@@ -9,8 +10,8 @@ const ComingSoon = dynamic(() => import('../../../components/Comingsoon'), {
 
 export default function Home() {
 
-
   return (
-    <ComingSoon />
+    <ImageToText />
+    // <ComingSoon />
   )
 }
