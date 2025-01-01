@@ -1,17 +1,9 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextResponse } from 'next/server';
 import multer from 'multer';
-import tesseract from 'node-tesseract-ocr';
 import path from 'path';
 import fs from 'fs';
 
-// Define custom types
-type NextApiRequestWithFile = NextApiRequest & {
-  file?: Express.Multer.File;
-};
-
-// type MulterFile = Express.Multer.File;
-
-// Configure multer
+// Configure multer for file uploads
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => {
@@ -25,50 +17,39 @@ const upload = multer({
   }),
 });
 
-// Create a Promise-based middleware runner
-const runMiddleware = (
-  req: NextApiRequestWithFile,
-  res: NextApiResponse,
-  fn: (req: NextApiRequestWithFile, res: NextApiResponse, cb: (error: Error | null) => void) => void
-): Promise<void> =>
-  new Promise((resolve, reject) => {
-    fn(req, res, (error: Error | null) => {
-      if (error) reject(error);
-      resolve();
+// Helper function to handle file upload
+const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: string }> => {
+  return new Promise((resolve, reject) => {
+    const nextReq = req as unknown as Parameters<typeof upload.single>[0];
+    const nextRes = {} as Parameters<typeof upload.single>[1];
+
+    upload.single('file')(nextReq, nextRes, (err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      if (!nextReq.file) {
+        reject(new Error('No file uploaded'));
+        return;
+      }
+
+      const filePath = path.join(process.cwd(), 'public', 'uploads', nextReq.file.filename);
+      const fileUrl = `/uploads/${nextReq.file.filename}`;
+      resolve({ filePath, fileUrl });
     });
   });
+};
 
-// API route handler
-export default async function handler(
-  req: NextApiRequestWithFile,
-  res: NextApiResponse
-): Promise<void> {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).json({ error: `Method ${req.method ?? 'Unknown'} Not Allowed` });
-    return;
-  }
-
+export async function POST(req: Request) {
   try {
-    await runMiddleware(req, res, upload.single('file') as unknown as (
-      req: NextApiRequestWithFile,
-      res: NextApiResponse,
-      cb: (error: Error | null) => void
-    ) => void);
-
-    const file = req.file;
-    if (!file) {
-      res.status(400).json({ error: 'No file uploaded' });
-      return;
-    }
-
-    const filePath = path.join(process.cwd(), 'public', 'uploads', file.filename);
-    const text = await tesseract.recognize(filePath, { lang: 'eng' });
-    const fileUrl = `/uploads/${file.filename}`;
-
-    res.status(200).json({ text, fileUrl });
+    const { filePath, fileUrl } = await handleUpload(req);
+    return NextResponse.json({ success: true, filePath, fileUrl });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Unknown error occurred' },
+      { status: 500 }
+    );
   }
 }
 
