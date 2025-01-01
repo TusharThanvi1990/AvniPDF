@@ -12,29 +12,25 @@ import { TextPlugin } from 'gsap/TextPlugin';
 // Register the plugin
 gsap.registerPlugin(TextPlugin);
 
-const ImageToText = () => {
+const ImageToText: React.FC = () => {
   const [processing, setProcessing] = useState<boolean>(false);
-  const [texts, setTexts] = useState<Array<string>>([]);
-  const imageInputRef: any = useRef(null);
+  const [texts, setTexts] = useState<string[]>([]);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const openBrowseImage = async () => {
-    await imageInputRef.current.click();
+    imageInputRef.current?.click();
   };
 
   const convert = async (url: string) => {
     if (url.length) {
       setProcessing(true);
-      await convertor(url).then((txt: string) => {
-        let copyTexts: Array<string> = texts;
-        copyTexts.push(txt);
-        setTexts(copyTexts);
-      });
+      const txt = await convertor(url);
+      setTexts((prevTexts) => [...prevTexts, txt]);
       setProcessing(false);
     }
   };
 
   useEffect(() => {
-    // Hero text animation logic
     const heroTextElement = document.querySelector('.hero-text');
     if (heroTextElement) {
       heroTextElement.innerHTML = '';
@@ -46,7 +42,7 @@ const ImageToText = () => {
 
     characters.forEach((char, index) => {
       const charElement = document.createElement('span');
-      charElement.innerText = char === ' ' ? '\u00A0' : char; // Add non-breaking space for spaces
+      charElement.innerText = char === ' ' ? '\u00A0' : char;
       charElement.style.display = 'inline-block';
       charElement.style.opacity = '0';
       heroTextElement?.appendChild(charElement);
@@ -59,7 +55,6 @@ const ImageToText = () => {
       });
     });
 
-    // Blinking effect
     gsap.to('.hero-text', {
       opacity: 0.5,
       repeat: -1,
@@ -93,7 +88,6 @@ const ImageToText = () => {
       animate="visible"
       variants={containerVariants}
     >
-      {/* Background sparkles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(20)].map((_, i) => (
           <motion.div
@@ -130,8 +124,11 @@ const ImageToText = () => {
       <input
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
           e.preventDefault();
-          let url: string = URL.createObjectURL(e.target.files?.[0]!);
-          convert(url);
+          const file = e.target.files?.[0];
+          if (file) {
+            const url = URL.createObjectURL(file);
+            convert(url);
+          }
         }}
         ref={imageInputRef}
         type="file"
@@ -144,16 +141,17 @@ const ImageToText = () => {
         variants={itemVariants}
       >
         <motion.div
-          onClick={() => {
-            openBrowseImage();
-          }}
-          onDragOver={(e: any) => {
+          onClick={openBrowseImage}
+          onDragOver={(e) => {
             e.preventDefault();
           }}
-          onDrop={(e: any) => {
+          onDrop={(e) => {
             e.preventDefault();
-            let url: string = URL.createObjectURL(e.dataTransfer.files?.[0]!);
-            convert(url);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              const url = URL.createObjectURL(file);
+              convert(url);
+            }
           }}
           className="w-full md:w-1/2 min-h-[30vh] md:min-h-[50vh] p-5 bg-[var(--card-bg)] cursor-pointer rounded-xl flex items-center justify-center border-2 border-dashed transition-all duration-300 group hover:border-solid"
           style={{ borderColor: 'var(--footer-link)' }}
@@ -179,9 +177,7 @@ const ImageToText = () => {
               </p>
             </div>
           ) : (
-            texts.map((t, i) => {
-              return <TextCard key={i} i={i} t={t} />;
-            })
+            texts.map((t, i) => <TextCard key={i} i={i} t={t} />)
           )}
         </motion.div>
       </motion.div>
