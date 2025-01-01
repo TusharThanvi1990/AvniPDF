@@ -41,9 +41,9 @@ const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: 
     });
 
     // Use multer to process the file
-    upload.single('file')(multerReq, multerRes, (err: any) => {
+    upload.single('file')(multerReq, multerRes, (err: Error | null) => {
       if (err) {
-        reject(err);
+        reject(err); // Reject the promise if error occurs
         return;
       }
 
