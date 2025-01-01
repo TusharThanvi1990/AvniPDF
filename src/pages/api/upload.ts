@@ -25,13 +25,18 @@ const upload = multer({
 
 const uploadMiddleware = upload.single('file');
 
-const runMiddleware = (req: NextApiRequest, res: NextApiResponse, fn: Function) => {
-  return new Promise<void>((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
+// Updated: Define a more specific function type for `runMiddleware`
+const runMiddleware = (
+  req: NextApiRequest,
+  res: NextApiResponse,
+  fn: (req: NextApiRequest, res: NextApiResponse, cb: (err: any) => void) => void
+): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (err: any) => {
+      if (err) {
+        return reject(err); // Reject if error occurs
       }
-      resolve();
+      resolve(); // Resolve if no error occurs
     });
   });
 };
