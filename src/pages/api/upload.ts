@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { IncomingMessage, ServerResponse } from 'http';
+
+// Define types for multer request
+type MulterRequest = IncomingMessage & {
+  file?: Express.Multer.File;
+};
 
 // Configure multer for file uploads
 const upload = multer({
@@ -17,35 +23,69 @@ const upload = multer({
   }),
 });
 
-// Helper function to handle file upload
+// Helper function to handle file upload with proper typing
 const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: string }> => {
   return new Promise((resolve, reject) => {
-    const nextReq = req as unknown as Parameters<typeof upload.single>[0];
-    const nextRes = {} as Parameters<typeof upload.single>[1];
+    // Create bare minimum req/res objects that multer expects
+    const multerReq = Object.assign(new IncomingMessage(null), {
+      headers: req.headers,
+      method: req.method,
+    }) as MulterRequest;
 
-    upload.single('file')(nextReq, nextRes, (err) => {
+    // Create a minimal response object
+    const multerRes = Object.assign(new ServerResponse(multerReq), {
+      setHeader: () => {},
+      status: () => {},
+      send: () => {},
+      json: () => {},
+    });
+
+    // Use multer to process the file
+    upload.single('file')(multerReq, multerRes, (err) => {
       if (err) {
         reject(err);
         return;
       }
 
-      if (!nextReq.file) {
+      if (!multerReq.file) {
         reject(new Error('No file uploaded'));
         return;
       }
 
-      const filePath = path.join(process.cwd(), 'public', 'uploads', nextReq.file.filename);
-      const fileUrl = `/uploads/${nextReq.file.filename}`;
+      const filePath = path.join(process.cwd(), 'public', 'uploads', multerReq.file.filename);
+      const fileUrl = `/uploads/${multerReq.file.filename}`;
       resolve({ filePath, fileUrl });
     });
   });
 };
 
+// Convert buffer to stream for multer
+async function bufferToStream(buffer: ArrayBuffer) {
+  const readable = new ReadableStream({
+    start(controller) {
+      controller.enqueue(buffer);
+      controller.close();
+    },
+  });
+
+  return readable;
+}
+
 export async function POST(req: Request) {
   try {
+    if (!req.body) {
+      return NextResponse.json({ error: 'No request body' }, { status: 400 });
+    }
+
     const { filePath, fileUrl } = await handleUpload(req);
-    return NextResponse.json({ success: true, filePath, fileUrl });
+
+    return NextResponse.json({
+      success: true,
+      filePath,
+      fileUrl,
+    });
   } catch (error) {
+    console.error('Error processing file:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error occurred' },
       { status: 500 }
@@ -58,3 +98,4 @@ export const config = {
     bodyParser: false,
   },
 };
+
