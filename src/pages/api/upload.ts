@@ -5,9 +5,9 @@ import fs from 'fs';
 import { IncomingMessage, ServerResponse } from 'http';
 
 // Define types for multer request
-type MulterRequest = IncomingMessage & {
+interface MulterRequest extends IncomingMessage {
   file?: Express.Multer.File;
-};
+}
 
 // Configure multer for file uploads
 const upload = multer({
@@ -26,24 +26,22 @@ const upload = multer({
 // Helper function to handle file upload with proper typing
 const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: string }> => {
   return new Promise((resolve, reject) => {
-    // Create a valid IncomingMessage object (mocked)
-    const multerReq = Object.assign(new IncomingMessage({} as any), {
-      headers: req.headers,
-      method: req.method,
-    }) as MulterRequest;
+    // Create a mock IncomingMessage object without using `any`
+    const multerReq = new IncomingMessage(req.socket); // Use the socket object instead of casting `any`
+    multerReq.headers = req.headers;
+    multerReq.method = req.method;
 
     // Create a minimal response object
-    const multerRes = Object.assign(new ServerResponse(multerReq), {
-      setHeader: () => {},
-      status: () => {},
-      send: () => {},
-      json: () => {},
-    });
+    const multerRes = new ServerResponse(multerReq);
+    multerRes.setHeader = () => {};
+    multerRes.statusCode = 200;
+    multerRes.send = () => {};
+    multerRes.json = () => {};
 
     // Use multer to process the file
     upload.single('file')(multerReq, multerRes, (err: Error | null) => {
       if (err) {
-        reject(err); // Reject the promise if error occurs
+        reject(err); // Reject the promise if an error occurs
         return;
       }
 
@@ -83,6 +81,6 @@ export async function POST(req: Request) {
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Disable body parsing to handle as a stream
   },
 };
