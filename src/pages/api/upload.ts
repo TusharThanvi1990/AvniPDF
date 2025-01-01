@@ -29,10 +29,10 @@ const uploadMiddleware = upload.single('file');
 const runMiddleware = (
   req: NextApiRequest,
   res: NextApiResponse,
-  fn: (req: NextApiRequest, res: NextApiResponse, cb: (err: any) => void) => void
+  fn: (req: NextApiRequest, res: NextApiResponse, cb: (err: Error | null) => void) => void
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
-    fn(req, res, (err: any) => {
+    fn(req, res, (err: Error | null) => {
       if (err) {
         return reject(err); // Reject if error occurs
       }
@@ -46,9 +46,15 @@ const handler: NextApiHandler = async (req, res) => {
     try {
       await runMiddleware(req, res, uploadMiddleware);
 
-      const filePath = path.join(process.cwd(), 'public/uploads', (req as NextApiRequestWithFile).file.filename);
+      // Properly check if file exists before accessing it
+      const file = (req as NextApiRequestWithFile).file;
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const filePath = path.join(process.cwd(), 'public/uploads', file.filename);
       const text: string = await tesseract.recognize(filePath, { lang: 'eng' });
-      const fileUrl = `/uploads/${(req as NextApiRequestWithFile).file.filename}`;
+      const fileUrl = `/uploads/${file.filename}`;
       res.status(200).json({ text, fileUrl });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
