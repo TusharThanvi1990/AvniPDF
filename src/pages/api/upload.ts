@@ -26,8 +26,8 @@ const upload = multer({
 // Helper function to handle file upload with proper typing
 const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: string }> => {
   return new Promise((resolve, reject) => {
-    // Create bare minimum req/res objects that multer expects
-    const multerReq = Object.assign(new IncomingMessage(null), {
+    // Create a valid IncomingMessage object (mocked)
+    const multerReq = Object.assign(new IncomingMessage({} as any), {
       headers: req.headers,
       method: req.method,
     }) as MulterRequest;
@@ -41,7 +41,7 @@ const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: 
     });
 
     // Use multer to process the file
-    upload.single('file')(multerReq, multerRes, (err) => {
+    upload.single('file')(multerReq, multerRes, (err: any) => {
       if (err) {
         reject(err);
         return;
@@ -58,7 +58,6 @@ const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: 
     });
   });
 };
-
 
 export async function POST(req: Request) {
   try {
