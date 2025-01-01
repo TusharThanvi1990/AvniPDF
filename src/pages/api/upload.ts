@@ -9,7 +9,7 @@ type NextApiRequestWithFile = NextApiRequest & {
   file?: Express.Multer.File;
 };
 
-type MulterFile = Express.Multer.File;
+// type MulterFile = Express.Multer.File;
 
 // Configure multer
 const upload = multer({
