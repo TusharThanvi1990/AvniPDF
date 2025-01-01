@@ -1,73 +1,79 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 import multer from 'multer';
 import tesseract from 'node-tesseract-ocr';
 import path from 'path';
 import fs from 'fs';
-import { NextApiRequest, NextApiResponse, NextApiHandler } from 'next';
 
-interface NextApiRequestWithFile extends NextApiRequest {
-  file: Express.Multer.File;
-}
+// Define custom types
+type NextApiRequestWithFile = NextApiRequest & {
+  file?: Express.Multer.File;
+};
 
+type MulterFile = Express.Multer.File;
+
+// Configure multer
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadPath = path.join(process.cwd(), 'public/uploads');
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
-      }
+    destination: (_req, _file, cb) => {
+      const uploadPath = path.join(process.cwd(), 'public', 'uploads');
+      fs.mkdirSync(uploadPath, { recursive: true });
       cb(null, uploadPath);
     },
-    filename: (req, file, cb) => {
-      cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    filename: (_req, file, cb) => {
+      cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
     },
   }),
 });
 
-const uploadMiddleware = upload.single('file');
-
-// Updated: Define a more specific function type for `runMiddleware`
+// Create a Promise-based middleware runner
 const runMiddleware = (
-  req: NextApiRequest,
+  req: NextApiRequestWithFile,
   res: NextApiResponse,
-  fn: (req: NextApiRequest, res: NextApiResponse, cb: (err: Error | null) => void) => void
-): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (err: Error | null) => {
-      if (err) {
-        return reject(err); // Reject if error occurs
-      }
-      resolve(); // Resolve if no error occurs
+  fn: (req: NextApiRequestWithFile, res: NextApiResponse, cb: (error: Error | null) => void) => void
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    fn(req, res, (error: Error | null) => {
+      if (error) reject(error);
+      resolve();
     });
   });
-};
 
-const handler: NextApiHandler = async (req, res) => {
-  if (req.method === 'POST') {
-    try {
-      await runMiddleware(req, res, uploadMiddleware);
-
-      // Properly check if file exists before accessing it
-      const file = (req as NextApiRequestWithFile).file;
-      if (!file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-      }
-
-      const filePath = path.join(process.cwd(), 'public/uploads', file.filename);
-      const text: string = await tesseract.recognize(filePath, { lang: 'eng' });
-      const fileUrl = `/uploads/${file.filename}`;
-      res.status(200).json({ text, fileUrl });
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  } else {
-    res.status(405).json({ error: `Method '${req.method}' Not Allowed` });
+// API route handler
+export default async function handler(
+  req: NextApiRequestWithFile,
+  res: NextApiResponse
+): Promise<void> {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    res.status(405).json({ error: `Method ${req.method ?? 'Unknown'} Not Allowed` });
+    return;
   }
-};
 
-export default handler;
+  try {
+    await runMiddleware(req, res, upload.single('file') as unknown as (
+      req: NextApiRequestWithFile,
+      res: NextApiResponse,
+      cb: (error: Error | null) => void
+    ) => void);
+
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: 'No file uploaded' });
+      return;
+    }
+
+    const filePath = path.join(process.cwd(), 'public', 'uploads', file.filename);
+    const text = await tesseract.recognize(filePath, { lang: 'eng' });
+    const fileUrl = `/uploads/${file.filename}`;
+
+    res.status(200).json({ text, fileUrl });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+}
 
 export const config = {
   api: {
-    bodyParser: false, // Disallow body parsing, consume as stream
+    bodyParser: false,
   },
 };
