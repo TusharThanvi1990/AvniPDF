@@ -4,11 +4,6 @@ import path from 'path';
 import fs from 'fs';
 import { IncomingMessage, ServerResponse } from 'http';
 
-// Define types for multer request
-interface MulterRequest extends IncomingMessage {
-  file?: Express.Multer.File;
-}
-
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.diskStorage({
