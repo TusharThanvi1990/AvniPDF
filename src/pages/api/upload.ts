@@ -59,17 +59,6 @@ const handleUpload = async (req: Request): Promise<{ filePath: string; fileUrl: 
   });
 };
 
-// Convert buffer to stream for multer
-async function bufferToStream(buffer: ArrayBuffer) {
-  const readable = new ReadableStream({
-    start(controller) {
-      controller.enqueue(buffer);
-      controller.close();
-    },
-  });
-
-  return readable;
-}
 
 export async function POST(req: Request) {
   try {
