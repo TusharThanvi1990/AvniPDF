@@ -23,7 +23,7 @@ const Footer = () => {
             <h3 className="footer-heading">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/about" className="footer-link text-sm">
+                <Link href="/about-us" className="footer-link text-sm">
                   About Us
                 </Link>
               </li>
@@ -50,14 +50,14 @@ const Footer = () => {
             <h3 className="footer-heading">Connect With Us</h3>
             <div className="space-y-2">
               <a 
-                href="mailto:contact@avnipdf.com" 
+                href="mailto:tushar.thanvi2005@gmail.com" 
                 className="flex items-center gap-2 footer-link text-sm"
               >
                 <Mail size={16} />
                 <span>Email Us</span>
               </a>
               <a 
-                href="https://github.com/yourusername" 
+                href="https://github.com/TusharThanvi1990" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="flex items-center gap-2 footer-link text-sm"
@@ -66,7 +66,7 @@ const Footer = () => {
                 <span>GitHub</span>
               </a>
               <a 
-                href="https://linkedin.com/in/yourusername" 
+                href="https://www.linkedin.com/in/tushar-thanvi-5044a128b" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="flex items-center gap-2 footer-link text-sm"
