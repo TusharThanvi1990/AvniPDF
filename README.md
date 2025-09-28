@@ -1,131 +1,82 @@
-Avni PDF - Comprehensive PDF Utility Application
+Avni PDF
 
-Overview
+Comprehensive PDF Utility Application
 
-Avni PDF is a robust and versatile PDF utility application designed to streamline and enhance PDF file management. Whether you need to compress, convert, or manipulate PDF documents, Avni PDF provides user-friendly features with modern UI components to simplify your workflow.
+Avni PDF is a modern and lightweight tool for managing PDF documents. It provides essential utilities like compression and Word-to-PDF conversion, packaged in a clean interface with smooth animations and theme support.
 
-Features
+✨ Features
 
-1. Compress PDF Files
+PDF Compression
 
-Reduce the file size of your PDF documents while maintaining quality.
+Reduce file size while maintaining quality.
 
-Adjustable compression levels for customized results.
+Adjustable compression levels with instant before/after comparison.
 
-Instant file size comparison before and after compression.
+Word → PDF Conversion
 
-Easy-to-use interface for uploading, compressing, and downloading files.
+Convert .docx files into high-quality PDFs.
 
-2. Word to PDF Conversion
+Preserves formatting, headers, and layout.
 
-Easily convert Word documents (.docx) into high-quality PDF files.
+Real-time preview before conversion.
 
-Supports text formatting, headers, and paragraphs.
+Modern UI
 
-Real-time document preview for accuracy.
+Light/Dark theme support.
 
-Converts complex Word structures into clean PDF layouts.
+Smooth animations powered by Framer Motion.
 
-3. User-Friendly Interface
+Simple and intuitive workflow.
 
-Avni PDF integrates a modern design using:
-
-Framer Motion for smooth animations.
-
-Customizable themes with light and dark modes.
-
-Installation and Setup
-
+🚀 Getting Started
 Prerequisites
 
-Ensure you have the following installed:
+Node.js v14+
 
-Node.js (v14 or higher)
+npm v6+
 
-npm (v6 or higher)
-
-Steps
-
-Clone the repository:
-
+Installation
 git clone https://github.com/TusharThanvi1990/avni-pdf.git
 cd avni-pdf
-
-Install dependencies:
-
 npm install
-
-Start the development server:
-
 npm run dev
 
-Open the application in your browser at http://localhost:3000.
 
-Usage
+Open in your browser: http://localhost:3000
 
-Compressing PDF Files
+🛠️ Technologies
 
-Upload a PDF file using the "Choose File" button.
+React + Next.js – Frontend & SSR
 
-Adjust the compression level using the slider.
+pdf-lib – PDF manipulation
 
-Click the "Compress PDF" button to generate the compressed file.
+mammoth.js – Word to HTML conversion
 
-Download the compressed file by clicking "Download Compressed PDF."
+Framer Motion – Animations
 
-Converting Word to PDF
+Tailwind CSS – Styling
 
-Upload a Word (.docx) file.
+🤝 Contribution
 
-Preview the content in the app.
-
-Click the "Convert to PDF" button to generate the PDF.
-
-Download the converted PDF.
-
-Technologies Used
-
-React: For building a dynamic front-end interface.
-
-Next.js: For server-side rendering and application structure.
-
-pdf-lib: To manipulate PDF files.
-
-mammoth.js: For converting Word documents to HTML before PDF generation.
-
-Framer Motion: For animations.
-
-Tailwind CSS: For styling the application.
-
-Contribution
-
-We welcome contributions! Follow these steps to contribute:
-
-Fork the repository.
+Fork the repository
 
 Create a feature branch:
 
-git checkout -b feature/your-feature-name
+git checkout -b feature/your-feature
+
 
 Commit your changes:
 
-git commit -m "Add your feature"
+git commit -m "Add: your feature"
 
-Push to your forked repository:
 
-git push origin feature/your-feature-name
+Push & open a Pull Request
 
-Submit a pull request.
+📜 License
 
-License
+Licensed under the Apache 2.0 License
+.
 
-This project is licensed under the Apache License 2.0. See the LICENSE file for details.
+📬 Contact
 
-Contact
-
-For queries or support, reach out via email:
-
-Tushar [tushar.thanvi2005@gmail.com]
-
-#
-
+For support or queries: tushar.thanvi2005@gmail.com
