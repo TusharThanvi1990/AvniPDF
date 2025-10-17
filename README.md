@@ -80,3 +80,5 @@ Licensed under the Apache 2.0 License
 📬 Contact
 
 For support or queries: tushar.thanvi2005@gmail.com
+
+Thanks :)
