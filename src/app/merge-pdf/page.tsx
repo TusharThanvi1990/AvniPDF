@@ -6,6 +6,6 @@ export default function Home() {
 
 
   return (
-    <ComingSoon />
+    <ComingSoon /> // rendering the comming soon page 
   )
 }
