@@ -5,7 +5,7 @@ import { Construction, Sparkles, Coffee, Code, Brush, Rocket } from 'lucide-reac
 const ComingSoon = () => {
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
-  // Update window size in the browser
+  // Update window size in the browser to make it dynamic 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const handleResize = () => {
