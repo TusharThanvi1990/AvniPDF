@@ -1,84 +1,108 @@
-Avni PDF
+<div align="center">
+  <img src="https://img.shields.io/badge/Status-Active-brightgreen" alt="Status">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License">
+  <img src="https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB" alt="React">
+  <img src="https://img.shields.io/badge/Next.js-000000?style=flat&logo=next.js&logoColor=white" alt="Next.js">
+</div>
 
-Comprehensive PDF Utility Application
+<br />
 
-Avni PDF is a modern and lightweight tool for managing PDF documents. It provides essential utilities like compression and Word-to-PDF conversion, packaged in a clean interface with smooth animations and theme support.
+<div align="center">
+  <h1>📄 Avni PDF</h1>
+  <p><strong>Comprehensive PDF Utility Application</strong></p>
+  <p align="center">
+    <i>Avni PDF is a modern and lightweight tool for managing PDF documents. It provides essential utilities like compression and Word-to-PDF conversion, packaged in a clean interface with smooth animations and theme support.</i>
+  </p>
+</div>
 
-✨ Features
+<hr />
 
-PDF Compression
+##  Features
 
-Reduce file size while maintaining quality.
+### 🗜️ PDF Compression
+- **Quality Preservation:** Reduce file size while maintaining high visual quality.
+- **Granular Control:** Adjustable compression levels with instant before/after comparison.
 
-Adjustable compression levels with instant before/after comparison.
+### Word → PDF Conversion
+- **High Fidelity:** Convert `.docx` files into high-quality PDFs.
+- **Layout Integrity:** Preserves formatting, headers, and complex layouts.
+- **Instant Preview:** Real-time preview before final conversion.
 
-Word → PDF Conversion
+### Modern UI/UX
+- **Theme Support:** Native Light/Dark mode integration.
+- **Fluid Motion:** Smooth animations and transitions powered by <b>Framer Motion</b>.
+- **User-Centric:** Simple and intuitive workflow designed for efficiency.
 
-Convert .docx files into high-quality PDFs.
+<hr />
 
-Preserves formatting, headers, and layout.
+##  Getting Started
 
-Real-time preview before conversion.
+### Prerequisites
+- <code style="color: #e74c3c;">Node.js v14+</code>
+- <code style="color: #2ecc71;">npm v6+</code>
 
-Modern UI
+### Installation
 
-Light/Dark theme support.
-
-Smooth animations powered by Framer Motion.
-
-Simple and intuitive workflow.
-
-🚀 Getting Started
-Prerequisites
-
-Node.js v14+
-
-npm v6+
-
-Installation
+```bash
+# Clone the repository
 git clone https://github.com/TusharThanvi1990/avni-pdf.git
+
+# Navigate to the project directory
 cd avni-pdf
+
+# Install dependencies
 npm install
+
+# Start the development server
 npm run dev
+```
 
+> **Note:** Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
-Open in your browser: http://localhost:3000
+<hr />
 
-🛠️ Technologies
+##  Technologies
 
-React + Next.js – Frontend & SSR
+| Component | Technology |
+| :--- | :--- |
+| **Frontend** | React + Next.js (SSR) |
+| **Logic** | pdf-lib (PDF Manipulation) |
+| **Parsing** | mammoth.js (Word to HTML) |
+| **Animations** | Framer Motion |
+| **Styling** | Tailwind CSS |
 
-pdf-lib – PDF manipulation
+<hr />
 
-mammoth.js – Word to HTML conversion
+##  Contribution
 
-Framer Motion – Animations
+We welcome contributions! Please follow these steps:
 
-Tailwind CSS – Styling
+1.  **Fork** the repository.
+2.  **Create** a feature branch:
+    ```bash
+    git checkout -b feature/your-feature
+    ```
+3.  **Commit** your changes:
+    ```bash
+    git commit -m "Add: your feature"
+    ```
+4.  **Push** & open a **Pull Request**.
 
-🤝 Contribution
+<hr />
 
-Fork the repository
+##  License
 
-Create a feature branch:
+Distributed under the **Apache 2.0 License**. See `LICENSE` for more information.
 
-git checkout -b feature/your-feature
+<hr />
 
+## Contact
 
-Commit your changes:
+<p>
+  <b>Tushar Thanvi</b> – 
+  <a href="mailto:tushar.thanvi2005@gmail.com">tushar.thanvi2005@gmail.com</a>
+</p>
 
-git commit -m "Add: your feature"
-
-
-Push & open a Pull Request
-
-📜 License
-
-Licensed under the Apache 2.0 License
-.
-
-📬 Contact
-
-For support or queries: tushar.thanvi2005@gmail.com
-
-Thanks :)
+<div align="center">
+  <sub>Built with ❤️ for the PDF community.</sub>
+</div>
