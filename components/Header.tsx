@@ -15,7 +15,7 @@ const Header = () => {
       <Link href="/">
         <div className="flex items-center space-x-2">
           <div className="font-bold text-2xl tracking-tight bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-            Avni PDF
+            Namaha PDF
           </div>
           <div 
             className="text-xs px-2 py-1 rounded-full hidden sm:block"

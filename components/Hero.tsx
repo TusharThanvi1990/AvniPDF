@@ -28,7 +28,7 @@ const Hero = () => {
       heroTextElement.innerHTML = '';
     }
 
-    const characters = "Made by Me with LOVE ❤️".split('');
+    const characters = "Crafted with care for those who create".split('');
 
     gsap.set('.hero-text', { opacity: 1 });
 

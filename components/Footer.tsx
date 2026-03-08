@@ -11,9 +11,9 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About Section */}
           <div className="footer-section md:col-span-2">
-            <h3 className="footer-heading">About AvniPDF</h3>
+            <h3 className="footer-heading">About NamahaPDF</h3>
             <p className="text-sm opacity-80 mb-4">
-              AvniPDF provides powerful PDF manipulation tools to help you work more efficiently. 
+              NamahaPDF provides powerful PDF manipulation tools to help you work more efficiently. 
               Convert, edit, and manage your PDF files with ease.
             </p>
           </div>
@@ -81,7 +81,7 @@ const Footer = () => {
         {/* Copyright */}
         <div className="mt-8 pt-8 border-t border-[var(--footer-border)] text-center">
           <p className="text-sm opacity-80">
-            © {currentYear} AvniPDF. All rights reserved.
+            © {currentYear} NamahaPDF. All rights reserved.
           </p>
         </div>
       </div>
