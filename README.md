@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="Namaha_thumbnail.png" width="100%" alt="Namaha Banner">
+</p>
 <div align="center">
   <img src="https://img.shields.io/badge/Status-Active-brightgreen" alt="Status">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License">
