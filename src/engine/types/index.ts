@@ -11,7 +11,7 @@ export interface AvniDocument {
     blob: Blob;
     type: DocumentType;
     size: number;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     history: ProcessingStep[];
 }
 
@@ -19,7 +19,7 @@ export interface ProcessingStep {
     taskId: string;
     processorName: string;
     timestamp: number;
-    params: Record<string, any>;
+    params: Record<string, unknown>;
 }
 
 export interface ProcessorResult {
@@ -36,12 +36,12 @@ export interface ProcessorResult {
 export interface IAvniProcessor {
     name: string;
     supportedTypes: DocumentType[];
-    process(doc: AvniDocument, params: Record<string, any>): Promise<ProcessorResult>;
+    process(doc: AvniDocument, params: Record<string, unknown>): Promise<ProcessorResult>;
 }
 
 export interface PipelineConfig {
     tasks: {
         processorName: string;
-        params: Record<string, any>;
+        params: Record<string, unknown>;
     }[];
 }

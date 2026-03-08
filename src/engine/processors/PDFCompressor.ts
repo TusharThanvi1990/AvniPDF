@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFRawStream, PDFName, PDFNumber } from 'pdf-lib';
 import {
     IAvniProcessor,
     AvniDocument,
@@ -10,9 +10,9 @@ export class PDFCompressor implements IAvniProcessor {
     name = 'pdf-compressor';
     supportedTypes = ['pdf' as const];
 
-    async process(doc: AvniDocument, params: { level: number }): Promise<ProcessorResult> {
+    async process(doc: AvniDocument, params: Record<string, unknown>): Promise<ProcessorResult> {
         try {
-            const { level } = params; // level is 0-100
+            const level = (params.level as number) || 50;
             const factor = level / 100;
 
             const arrayBuffer = await doc.blob.arrayBuffer();
@@ -26,44 +26,41 @@ export class PDFCompressor implements IAvniProcessor {
             pdfDoc.setCreator('');
             pdfDoc.setProducer('');
 
-            // 2. Image Optimization (The most effective Adobe-level technique)
-            // We iterate through all objects in the PDF to find images
+            // 2. Image Optimization
             const indirectObjects = pdfDoc.context.enumerateIndirectObjects();
 
-            for (const [ref, obj] of indirectObjects) {
-                if (!(obj instanceof (await import('pdf-lib')).PDFRawStream)) continue;
+            for (const [, obj] of indirectObjects) {
+                if (!(obj instanceof PDFRawStream)) continue;
 
                 const dict = obj.dict;
-                const subtype = dict.get((await import('pdf-lib')).PDFName.of('Subtype'));
+                const subtype = dict.get(PDFName.of('Subtype'));
 
-                if (subtype === (await import('pdf-lib')).PDFName.of('Image')) {
-                    // This is an image! Let's optimize it.
+                if (subtype === PDFName.of('Image')) {
                     try {
-                        const width = (dict.get((await import('pdf-lib')).PDFName.of('Width')) as any)?.value;
-                        const height = (dict.get((await import('pdf-lib')).PDFName.of('Height')) as any)?.value;
+                        const widthObj = dict.get(PDFName.of('Width'));
+                        const heightObj = dict.get(PDFName.of('Height'));
 
-                        // Only downsample if it's a reasonably large image
+                        const width = widthObj instanceof PDFNumber ? widthObj.asNumber() : 0;
+                        const height = heightObj instanceof PDFNumber ? heightObj.asNumber() : 0;
+
                         if (width > 500 || height > 500) {
                             const originalData = obj.contents;
-
-                            // Helper to compress image in browser
                             const compressedData = await this.compressImageInBrowser(originalData, width, height, factor);
 
                             if (compressedData && compressedData.length < originalData.length) {
-                                // Update the stream with compressed data
-                                (obj as any).contents = compressedData;
-                                dict.set((await import('pdf-lib')).PDFName.of('Length'), (await import('pdf-lib')).PDFNumber.of(compressedData.length));
-                                // Ensure it's treated as JPEG (DCTDecode)
-                                dict.set((await import('pdf-lib')).PDFName.of('Filter'), (await import('pdf-lib')).PDFName.of('DCTDecode'));
+                                // @ts-expect-error - contents is read-only in types but we need to modify it for compression
+                                obj.contents = compressedData;
+                                dict.set(PDFName.of('Length'), PDFNumber.of(compressedData.length));
+                                dict.set(PDFName.of('Filter'), PDFName.of('DCTDecode'));
                             }
                         }
-                    } catch (e) {
-                        console.warn('Could not optimize image object:', ref, e);
+                    } catch {
+                        // Silent skip for individual image errors
                     }
                 }
             }
 
-            // 3. Structural Scaling (for extreme cases)
+            // 3. Structural Scaling
             if (factor < 0.7) {
                 const pages = pdfDoc.getPages();
                 for (const page of pages) {
@@ -76,25 +73,42 @@ export class PDFCompressor implements IAvniProcessor {
                 useObjectStreams: true,
             });
 
-            const compressedBlob = new Blob([compressedBytes as any], { type: 'application/pdf' });
+            // @ts-expect-error - Uint8Array is compatible with BlobPart at runtime
+            const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
+
+            const step: ProcessingStep = {
+                taskId: crypto.randomUUID(),
+                processorName: this.name,
+                timestamp: Date.now(),
+                params
+            };
 
             return {
                 success: true,
-                document: { ...doc, blob: compressedBlob, size: compressedBlob.size, history: [...doc.history, { taskId: crypto.randomUUID(), processorName: this.name, timestamp: Date.now(), params }] },
+                document: {
+                    ...doc,
+                    blob: compressedBlob,
+                    size: compressedBlob.size,
+                    history: [...doc.history, step]
+                },
                 metrics: { duration: 0, originalSize: doc.size, newSize: compressedBlob.size }
             };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Adobe-Level Compression error:', error);
-            return { success: false, document: doc, error: error.message };
+            return {
+                success: false,
+                document: doc,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
         }
     }
 
-    // Internal helper to compress images using Browser Canvas API
     private async compressImageInBrowser(data: Uint8Array, width: number, height: number, factor: number): Promise<Uint8Array | null> {
         return new Promise((resolve) => {
             try {
-                const blob = new Blob([data as any]);
+                // @ts-expect-error - Uint8Array is compatible with BlobPart at runtime
+                const blob = new Blob([data]);
                 const url = URL.createObjectURL(blob);
                 const img = new Image();
 
@@ -105,13 +119,11 @@ export class PDFCompressor implements IAvniProcessor {
 
                     if (!ctx) return resolve(null);
 
-                    // Downsample dimensions
                     canvas.width = Math.floor(width * factor);
                     canvas.height = Math.floor(height * factor);
 
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                    // Export as JPEG with quality based on factor
                     canvas.toBlob((resultBlob) => {
                         if (!resultBlob) return resolve(null);
                         const reader = new FileReader();
@@ -128,7 +140,7 @@ export class PDFCompressor implements IAvniProcessor {
                 };
 
                 img.src = url;
-            } catch (e) {
+            } catch {
                 resolve(null);
             }
         });
