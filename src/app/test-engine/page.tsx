@@ -77,7 +77,7 @@ export default function TestEnginePage() {
             <div className="max-w-4xl mx-auto space-y-8">
                 <header className="text-center">
                     <h1 className="text-3xl font-bold" style={{ color: 'var(--footer-link)' }}>
-                        Avni Engine Laboratory 🧪
+                        Avni Engine Laboratory 
                     </h1>
                     <p className="text-[var(--footer-muted)]">Testing orchestrator and micro-tasks</p>
                 </header>
@@ -117,11 +117,11 @@ export default function TestEnginePage() {
                             <motion.button
                                 onClick={runTest}
                                 disabled={isProcessing}
-                                className="w-full py-3 bg-[var(--hero-bg)] text-white rounded-xl font-bold shadow-lg"
+                                className="w-full py-3 bg-[var(--hero-bg)] text-black rounded-xl font-bold shadow-lg"
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
-                                {isProcessing ? 'Engine Processing...' : 'Execute Avni Pipeline ⚙️'}
+                                {isProcessing ? 'Engine Processing...' : 'Execute Avni Pipeline '}
                             </motion.button>
                         </div>
                     )}
@@ -141,9 +141,9 @@ export default function TestEnginePage() {
                                 </div>
                                 <button
                                     onClick={() => downloadResult(res.document)}
-                                    className="px-4 py-2 bg-[var(--footer-link)] text-white rounded-lg text-sm"
+                                    className="px-4 py-2 bg-[var(--footer-link)] text-black rounded-lg text-sm"
                                 >
-                                    Download Output
+                                    Download Output.  
                                 </button>
                             </div>
                         ))}
