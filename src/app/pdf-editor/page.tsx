@@ -1,12 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-
-// Dynamically import the PDFTronEditor component with SSR disabled
-const PDFTronEditor = dynamic(() => import('../../../components/PDFEditor_PDFtron'), { 
-  ssr: false 
-});
+import PDFEditorEngine from '../../../components/PDFEditorEngine';
 
 export default function Home() {
-  return <PDFTronEditor />;
+  return <PDFEditorEngine />;
 }
