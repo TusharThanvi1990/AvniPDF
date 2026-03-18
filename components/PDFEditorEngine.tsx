@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
 import { avniEngine } from '../src/engine/core/Orchestrator';
 import { PDFEditProcessor } from '../src/engine/processors/PDFEditProcessor';
 import { AvniDocument } from '../src/engine/types';
 import { PDFEditOperation } from '../src/engine/editor/types';
+import { hitTestTextRun } from '../src/engine/editor/hitTest';
+import { PageTextIndex } from '../src/engine/editor/textModel';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf-workers/pdf.worker.min.js';
 
@@ -16,19 +20,21 @@ type PageMeta = {
     height: number;
 };
 
-type TextBox = {
+type ActiveInlineEditor = {
+    pageIndex: number;
+    runId: string;
+    value: string;
     left: number;
     top: number;
     width: number;
     height: number;
-    text: string;
-};
-
-type TextItemLike = {
-    str?: string;
-    transform?: number[];
-    width?: number;
-    height?: number;
+    fontSize: number;
+    pdfRect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    };
 };
 
 const buildDoc = (blob: Blob, name: string): AvniDocument => ({
@@ -52,7 +58,10 @@ const PDFEditorEngine = () => {
     const [insertFontSize, setInsertFontSize] = useState(14);
     const [scale] = useState(1.4);
     const [pageMeta, setPageMeta] = useState<Record<number, PageMeta>>({});
-    const [textBoxes, setTextBoxes] = useState<Record<number, TextBox[]>>({});
+    const [pageTextIndex, setPageTextIndex] = useState<Record<number, PageTextIndex>>({});
+    const [activeInlineEditor, setActiveInlineEditor] = useState<ActiveInlineEditor | null>(null);
+    const inlineEditorRef = useRef<HTMLTextAreaElement | null>(null);
+    const pageContainerRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
     const [rotateDegrees, setRotateDegrees] = useState<90 | 180 | 270>(90);
     const [pageOpIndex, setPageOpIndex] = useState(0);
@@ -78,6 +87,12 @@ const PDFEditorEngine = () => {
             }
         };
     }, [previewUrl]);
+
+    useEffect(() => {
+        if (!activeInlineEditor) return;
+        inlineEditorRef.current?.focus();
+        inlineEditorRef.current?.select();
+    }, [activeInlineEditor]);
 
     const runOperation = async (operation: PDFEditOperation) => {
         if (!activeBlob) return;
@@ -129,10 +144,7 @@ const PDFEditorEngine = () => {
         URL.revokeObjectURL(url);
     };
 
-    const handlePageClick = async (
-        event: React.MouseEvent<HTMLDivElement>,
-        pageIndex: number
-    ) => {
+    const handleAddTextAtClick = async (event: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
         if (!activeBlob || tool !== 'add-text') return;
 
         const meta = pageMeta[pageIndex];
@@ -142,8 +154,11 @@ const PDFEditorEngine = () => {
         const clickX = event.clientX - rect.left;
         const clickY = event.clientY - rect.top;
 
+        const nearestRun = hitTestTextRun(pageTextIndex[pageIndex], clickX, clickY, 36)?.run;
+
         const pdfX = clickX / scale;
-        const pdfY = meta.height - clickY / scale;
+        const pdfY = nearestRun ? nearestRun.pdfRect.y : meta.height - clickY / scale;
+        const fontSize = nearestRun ? nearestRun.fontSize : insertFontSize;
 
         await runOperation({
             type: 'insert-text',
@@ -151,59 +166,113 @@ const PDFEditorEngine = () => {
             text: insertText,
             x: pdfX,
             y: pdfY,
-            size: insertFontSize,
+            size: fontSize,
         });
     };
 
-    const handleReplaceText = async (pageIndex: number, box: TextBox) => {
+    const handleEditTextAtClick = (event: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
         if (tool !== 'edit-text') return;
 
-        const newText = window.prompt('Replace selected text with:', box.text);
-        if (!newText || !newText.trim()) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
 
-        const meta = pageMeta[pageIndex];
-        if (!meta) return;
+        const hit = hitTestTextRun(pageTextIndex[pageIndex], clickX, clickY, 10);
+        if (!hit) {
+            setMessage('No text found at click position. Try clicking directly on text.');
+            return;
+        }
 
-        const pdfX = box.left / scale;
-        const pdfY = meta.height - (box.top + box.height) / scale;
-        const pdfW = box.width / scale;
-        const pdfH = Math.max(8, box.height / scale);
+        setActiveInlineEditor({
+            pageIndex,
+            runId: hit.run.id,
+            value: hit.run.text,
+            left: hit.run.viewportRect.left,
+            top: hit.run.viewportRect.top,
+            width: Math.max(40, hit.run.viewportRect.width + 6),
+            height: Math.max(20, hit.run.viewportRect.height + 6),
+            fontSize: hit.run.fontSize,
+            pdfRect: hit.run.pdfRect,
+        });
+    };
+
+    const commitInlineEdit = async () => {
+        if (!activeInlineEditor) return;
+
+        const editor = activeInlineEditor;
+        setActiveInlineEditor(null);
 
         await runOperation({
             type: 'replace-text',
-            pageIndex,
-            x: pdfX,
-            y: pdfY,
-            width: pdfW,
-            height: pdfH,
-            newText: newText.trim(),
-            size: pdfH * 0.8,
+            pageIndex: editor.pageIndex,
+            x: editor.pdfRect.x,
+            y: editor.pdfRect.y,
+            width: editor.pdfRect.width,
+            height: Math.max(8, editor.pdfRect.height),
+            newText: editor.value,
+            size: editor.fontSize,
         });
     };
 
-    const collectTextLayer = (pageIndex: number, items: unknown[]) => {
-        const boxes: TextBox[] = [];
+    const collectTextLayerFromDom = (pageIndex: number) => {
+        const meta = pageMeta[pageIndex];
+        if (!meta) return;
 
-        for (const item of items as TextItemLike[]) {
-            if (!item?.str || !item.transform) continue;
+        const container = pageContainerRefs.current[pageIndex];
+        if (!container) return;
 
-            const left = item.transform[4] ?? 0;
-            const height = Math.max(8, item.height ?? 10);
-            const top = (item.transform[5] ?? 0) - height;
-            const width = Math.max(3, item.width ?? item.str.length * 6);
+        const layer = container.querySelector('.react-pdf__Page__textContent');
+        if (!layer) return;
 
-            boxes.push({
-                left,
-                top,
-                width,
-                height,
-                text: item.str,
-            });
-        }
+        const containerRect = container.getBoundingClientRect();
+        const spans = Array.from(layer.querySelectorAll('span'));
 
-        setTextBoxes((prev) => ({
+        const runs = spans
+            .map((span, index) => {
+                const text = span.textContent?.trim() ?? '';
+                if (!text) return null;
+
+                const rect = span.getBoundingClientRect();
+                const left = rect.left - containerRect.left;
+                const top = rect.top - containerRect.top;
+                const width = rect.width;
+                const height = rect.height;
+
+                if (width < 1 || height < 1) return null;
+
+                const fontSizePx = Number.parseFloat(window.getComputedStyle(span).fontSize) || 12;
+
+                return {
+                    id: `${pageIndex}-dom-${index}-${Math.round(left)}-${Math.round(top)}`,
+                    pageIndex,
+                    text,
+                    viewportRect: {
+                        left,
+                        top,
+                        width,
+                        height,
+                    },
+                    pdfRect: {
+                        x: left / scale,
+                        y: meta.height - (top + height) / scale,
+                        width: width / scale,
+                        height: height / scale,
+                    },
+                    fontSize: Math.max(8, fontSizePx / scale),
+                };
+            })
+            .filter((run): run is NonNullable<typeof run> => run !== null);
+
+        const textIndex: PageTextIndex = {
+            pageIndex,
+            pageWidth: meta.width,
+            pageHeight: meta.height,
+            runs,
+        };
+
+        setPageTextIndex((prev) => ({
             ...prev,
-            [pageIndex]: boxes,
+            [pageIndex]: textIndex,
         }));
     };
 
@@ -221,7 +290,8 @@ const PDFEditorEngine = () => {
                             setSourceFile(next);
                             setWorkingBlob(next);
                             setPageMeta({});
-                            setTextBoxes({});
+                            setPageTextIndex({});
+                            setActiveInlineEditor(null);
                             setMessage(next ? 'PDF loaded into editor engine.' : '');
                         }}
                         className="p-2 border rounded"
@@ -248,7 +318,7 @@ const PDFEditorEngine = () => {
                                     }}
                                     onClick={() => setTool('edit-text')}
                                 >
-                                    Edit Text (click existing text)
+                                    Edit Text (click text)
                                 </button>
                                 <button
                                     className="px-4 py-2 rounded-md"
@@ -259,7 +329,7 @@ const PDFEditorEngine = () => {
                                     }}
                                     onClick={() => setTool('add-text')}
                                 >
-                                    Add Text (click anywhere)
+                                    Add Text (click page)
                                 </button>
                             </div>
 
@@ -296,7 +366,13 @@ const PDFEditorEngine = () => {
                                     <option value={180}>Rotate 180°</option>
                                     <option value={270}>Rotate 270°</option>
                                 </select>
-                                <input type="number" value={pageOpIndex} onChange={(e) => setPageOpIndex(Number(e.target.value))} className="p-2 border rounded" placeholder="Page index" />
+                                <input
+                                    type="number"
+                                    value={pageOpIndex}
+                                    onChange={(e) => setPageOpIndex(Number(e.target.value))}
+                                    className="p-2 border rounded"
+                                    placeholder="Page index"
+                                />
                             </div>
 
                             <div className="flex flex-wrap gap-3">
@@ -339,8 +415,17 @@ const PDFEditorEngine = () => {
                                         <div
                                             key={index}
                                             className="relative mb-6 border rounded overflow-hidden"
-                                            onClick={(event) => handlePageClick(event, index)}
-                                            style={{ cursor: tool === 'add-text' ? 'crosshair' : 'default' }}
+                                            ref={(element) => {
+                                                pageContainerRefs.current[index] = element;
+                                            }}
+                                            onClick={(event) => {
+                                                if (tool === 'add-text') {
+                                                    handleAddTextAtClick(event, index);
+                                                    return;
+                                                }
+                                                handleEditTextAtClick(event, index);
+                                            }}
+                                            style={{ cursor: tool === 'add-text' ? 'crosshair' : 'text' }}
                                         >
                                             <Page
                                                 pageNumber={index + 1}
@@ -357,32 +442,50 @@ const PDFEditorEngine = () => {
                                                         },
                                                     }));
                                                 }}
-                                                onGetTextSuccess={(data) => collectTextLayer(index, data.items as unknown[])}
+                                                onRenderTextLayerSuccess={() => {
+                                                    window.requestAnimationFrame(() => {
+                                                        collectTextLayerFromDom(index);
+                                                    });
+                                                }}
                                             />
 
-                                            {tool === 'edit-text' &&
-                                                (textBoxes[index] ?? []).map((box, boxIndex) => (
-                                                    <button
-                                                        key={`${index}-${boxIndex}-${box.left}-${box.top}`}
-                                                        type="button"
-                                                        title={`Edit: ${box.text}`}
-                                                        className="absolute"
-                                                        style={{
-                                                            left: `${box.left}px`,
-                                                            top: `${box.top}px`,
-                                                            width: `${box.width}px`,
-                                                            height: `${box.height}px`,
-                                                            background: 'transparent',
-                                                            border: 'none',
-                                                            outline: 'none',
-                                                            cursor: 'text',
-                                                        }}
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            handleReplaceText(index, box);
-                                                        }}
-                                                    />
-                                                ))}
+                                            {activeInlineEditor && activeInlineEditor.pageIndex === index && (
+                                                <textarea
+                                                    ref={inlineEditorRef}
+                                                    value={activeInlineEditor.value}
+                                                    onMouseDown={(event) => event.stopPropagation()}
+                                                    onClick={(event) => event.stopPropagation()}
+                                                    onChange={(event) => {
+                                                        setActiveInlineEditor((prev) => {
+                                                            if (!prev) return prev;
+                                                            return { ...prev, value: event.target.value };
+                                                        });
+                                                    }}
+                                                    onBlur={() => {
+                                                        void commitInlineEdit();
+                                                    }}
+                                                    onKeyDown={(event) => {
+                                                        if (event.key === 'Enter' && !event.shiftKey) {
+                                                            event.preventDefault();
+                                                            void commitInlineEdit();
+                                                        }
+                                                        if (event.key === 'Escape') {
+                                                            setActiveInlineEditor(null);
+                                                        }
+                                                    }}
+                                                    className="absolute z-20 resize-none border rounded px-1 py-0.5"
+                                                    style={{
+                                                        left: `${activeInlineEditor.left}px`,
+                                                        top: `${activeInlineEditor.top}px`,
+                                                        width: `${activeInlineEditor.width}px`,
+                                                        minHeight: `${activeInlineEditor.height}px`,
+                                                        fontSize: `${activeInlineEditor.fontSize * scale}px`,
+                                                        lineHeight: 1.2,
+                                                        background: 'rgba(255,255,255,0.95)',
+                                                        color: '#111827',
+                                                    }}
+                                                />
+                                            )}
                                         </div>
                                     ))}
                                 </Document>
