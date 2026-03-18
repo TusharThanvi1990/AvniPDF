@@ -1,4 +1,4 @@
-import { degrees, rgb, PDFDocument, StandardFonts } from 'pdf-lib';
+import { degrees, PDFFont, rgb, PDFDocument, StandardFonts } from 'pdf-lib';
 import { AvniDocument } from '../types';
 import { PDFColor, PDFEditOperation } from './types';
 
@@ -7,6 +7,14 @@ const clampColor = (color: PDFColor) => ({
     g: Math.min(1, Math.max(0, color.g)),
     b: Math.min(1, Math.max(0, color.b)),
 });
+
+const mapPdfFontName = (pdfName?: string): StandardFonts => {
+    const name = (pdfName ?? '').toLowerCase();
+
+    if (name.includes('times')) return StandardFonts.TimesRoman;
+    if (name.includes('courier')) return StandardFonts.Courier;
+    return StandardFonts.Helvetica;
+};
 
 export class PDFEditSession {
     private constructor(private readonly pdfDoc: PDFDocument) {}
@@ -24,7 +32,7 @@ export class PDFEditSession {
     async applyOperations(operations: PDFEditOperation[]): Promise<void> {
         if (operations.length === 0) return;
 
-        const font = await this.pdfDoc.embedFont(StandardFonts.Helvetica);
+        const defaultFont = await this.pdfDoc.embedFont(StandardFonts.Helvetica);
 
         for (const operation of operations) {
             if (operation.type === 'delete-page') {
@@ -41,7 +49,7 @@ export class PDFEditSession {
                     x: operation.x,
                     y: operation.y,
                     size: operation.size ?? 14,
-                    font,
+                    font: defaultFont,
                     color: rgb(textColor.r, textColor.g, textColor.b),
                 });
                 continue;
@@ -62,8 +70,13 @@ export class PDFEditSession {
 
             if (operation.type === 'replace-text') {
                 const bg = clampColor(operation.backgroundColor ?? { r: 1, g: 1, b: 1 });
-                const textColor = clampColor(operation.color ?? { r: 0, g: 0, b: 0 });
-                const textSize = operation.size ?? Math.max(8, operation.height * 0.8);
+                const textColor = clampColor(
+                    operation.color ?? operation.font?.color ?? { r: 0, g: 0, b: 0 },
+                );
+                const textSize = operation.size ?? operation.font?.sizePt ?? Math.max(8, operation.height * 0.8);
+                const font: PDFFont = operation.font?.pdfName
+                    ? await this.pdfDoc.embedFont(mapPdfFontName(operation.font.pdfName))
+                    : defaultFont;
 
                 page.drawRectangle({
                     x: operation.x,
@@ -75,7 +88,7 @@ export class PDFEditSession {
 
                 page.drawText(operation.newText, {
                     x: operation.x,
-                    y: operation.y + Math.max(0, (operation.height - textSize) / 2),
+                    y: operation.baselineY ?? operation.y + Math.max(0, (operation.height - textSize) / 2),
                     size: textSize,
                     font,
                     color: rgb(textColor.r, textColor.g, textColor.b),

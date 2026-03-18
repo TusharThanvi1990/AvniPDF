@@ -10,6 +10,7 @@ import { AvniDocument } from '../src/engine/types';
 import { PDFEditOperation } from '../src/engine/editor/types';
 import { hitTestTextRun } from '../src/engine/editor/hitTest';
 import { PageTextIndex } from '../src/engine/editor/textModel';
+import { screenRectToPdfRect, screenToPdfPoint } from '../src/engine/editor/coordinates';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf-workers/pdf.worker.min.js';
 
@@ -35,6 +36,39 @@ type ActiveInlineEditor = {
         width: number;
         height: number;
     };
+    baselineY: number;
+    font: {
+        cssFamily?: string;
+        pdfName?: string;
+        sizePt: number;
+        weight?: string;
+        color?: {
+            r: number;
+            g: number;
+            b: number;
+        };
+        lineHeight?: number;
+        charSpacing?: number;
+    };
+};
+
+const parseCssColor = (cssColor: string): { r: number; g: number; b: number } | undefined => {
+    const match = cssColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (!match) return undefined;
+
+    return {
+        r: Number(match[1]) / 255,
+        g: Number(match[2]) / 255,
+        b: Number(match[3]) / 255,
+    };
+};
+
+const mapCssFontToPdfName = (fontFamily: string): string | undefined => {
+    const family = fontFamily.toLowerCase();
+    if (family.includes('times')) return 'Times-Roman';
+    if (family.includes('courier')) return 'Courier';
+    if (family.includes('helvetica') || family.includes('arial')) return 'Helvetica';
+    return undefined;
 };
 
 const buildDoc = (blob: Blob, name: string): AvniDocument => ({
@@ -156,7 +190,8 @@ const PDFEditorEngine = () => {
 
         const nearestRun = hitTestTextRun(pageTextIndex[pageIndex], clickX, clickY, 36)?.run;
 
-        const pdfX = clickX / scale;
+        const pdfPoint = screenToPdfPoint({ x: clickX, y: clickY }, meta.height, scale);
+        const pdfX = pdfPoint.x;
         const pdfY = nearestRun ? nearestRun.pdfRect.y : meta.height - clickY / scale;
         const fontSize = nearestRun ? nearestRun.fontSize : insertFontSize;
 
@@ -193,6 +228,8 @@ const PDFEditorEngine = () => {
             height: Math.max(20, hit.run.viewportRect.height + 6),
             fontSize: hit.run.fontSize,
             pdfRect: hit.run.pdfRect,
+            baselineY: hit.run.pdfBaseline.y,
+            font: hit.run.font,
         });
     };
 
@@ -209,8 +246,11 @@ const PDFEditorEngine = () => {
             y: editor.pdfRect.y,
             width: editor.pdfRect.width,
             height: Math.max(8, editor.pdfRect.height),
+            baselineY: editor.baselineY,
             newText: editor.value,
-            size: editor.fontSize,
+            size: editor.font.sizePt,
+            font: editor.font,
+            color: editor.font.color,
         });
     };
 
@@ -241,6 +281,19 @@ const PDFEditorEngine = () => {
                 if (width < 1 || height < 1) return null;
 
                 const fontSizePx = Number.parseFloat(window.getComputedStyle(span).fontSize) || 12;
+                const style = window.getComputedStyle(span);
+                const lineHeightPx = Number.parseFloat(style.lineHeight);
+
+                const pdfRect = screenRectToPdfRect(
+                    {
+                        left,
+                        top,
+                        width,
+                        height,
+                    },
+                    meta.height,
+                    scale,
+                );
 
                 return {
                     id: `${pageIndex}-dom-${index}-${Math.round(left)}-${Math.round(top)}`,
@@ -252,13 +305,20 @@ const PDFEditorEngine = () => {
                         width,
                         height,
                     },
-                    pdfRect: {
-                        x: left / scale,
+                    pdfRect,
+                    pdfBaseline: {
+                        x: pdfRect.x,
                         y: meta.height - (top + height) / scale,
-                        width: width / scale,
-                        height: height / scale,
                     },
                     fontSize: Math.max(8, fontSizePx / scale),
+                    font: {
+                        cssFamily: style.fontFamily,
+                        pdfName: mapCssFontToPdfName(style.fontFamily),
+                        sizePt: Math.max(8, fontSizePx / scale),
+                        weight: style.fontWeight,
+                        color: parseCssColor(style.color),
+                        lineHeight: Number.isFinite(lineHeightPx) ? lineHeightPx / scale : undefined,
+                    },
                 };
             })
             .filter((run): run is NonNullable<typeof run> => run !== null);
@@ -479,10 +539,14 @@ const PDFEditorEngine = () => {
                                                         top: `${activeInlineEditor.top}px`,
                                                         width: `${activeInlineEditor.width}px`,
                                                         minHeight: `${activeInlineEditor.height}px`,
-                                                        fontSize: `${activeInlineEditor.fontSize * scale}px`,
-                                                        lineHeight: 1.2,
+                                                        fontSize: `${activeInlineEditor.font.sizePt * scale}px`,
+                                                        lineHeight: activeInlineEditor.font.lineHeight ? `${activeInlineEditor.font.lineHeight * scale}px` : 1.2,
+                                                        fontFamily: activeInlineEditor.font.cssFamily,
+                                                        fontWeight: activeInlineEditor.font.weight,
                                                         background: 'rgba(255,255,255,0.95)',
-                                                        color: '#111827',
+                                                        color: activeInlineEditor.font.color
+                                                            ? `rgb(${Math.round(activeInlineEditor.font.color.r * 255)}, ${Math.round(activeInlineEditor.font.color.g * 255)}, ${Math.round(activeInlineEditor.font.color.b * 255)})`
+                                                            : '#111827',
                                                     }}
                                                 />
                                             )}

@@ -4,6 +4,16 @@ export type PDFColor = {
     b: number;
 };
 
+export type PDFFontSpec = {
+    cssFamily?: string;
+    pdfName?: string;
+    sizePt: number;
+    weight?: string;
+    color?: PDFColor;
+    lineHeight?: number;
+    charSpacing?: number;
+};
+
 export type InsertTextOperation = {
     type: 'insert-text';
     pageIndex: number;
@@ -31,8 +41,10 @@ export type ReplaceTextOperation = {
     y: number;
     width: number;
     height: number;
+    baselineY?: number;
     newText: string;
     size?: number;
+    font?: PDFFontSpec;
     color?: PDFColor;
     backgroundColor?: PDFColor;
 };
