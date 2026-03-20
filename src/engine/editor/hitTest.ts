@@ -1,66 +1,32 @@
-import { HitTestResult, PageTextIndex, Rect, TextRun } from './textModel';
+import { TextRun } from './types';
 
-const pointToRectDistance = (x: number, y: number, rect: Rect): number => {
-    const dx = Math.max(rect.left - x, 0, x - (rect.left + rect.width));
-    const dy = Math.max(rect.top - y, 0, y - (rect.top + rect.height));
-    return Math.sqrt(dx * dx + dy * dy);
+const containsPoint = (x: number, y: number, run: TextRun): boolean => {
+    return x >= run.pdfX && x <= run.pdfX + run.width && y >= run.pdfY && y <= run.pdfY + run.height;
 };
 
-const containsPoint = (x: number, y: number, rect: Rect): boolean => {
-    return (
-        x >= rect.left &&
-        x <= rect.left + rect.width &&
-        y >= rect.top &&
-        y <= rect.top + rect.height
-    );
-};
+export const hitTestTextRuns = (
+    pdfPoint: { x: number; y: number },
+    runs: TextRun[] | undefined,
+    tolerance = 5,
+): TextRun | null => {
+    if (!runs || runs.length === 0) return null;
 
-const pickClosestRun = (x: number, y: number, runs: TextRun[]): HitTestResult | null => {
-    if (runs.length === 0) return null;
+    const contained = runs.find((run) => containsPoint(pdfPoint.x, pdfPoint.y, run));
+    if (contained) return contained;
 
-    const containingRuns = runs.filter((run) => containsPoint(x, y, run.viewportRect));
-    if (containingRuns.length > 0) {
-        const ranked = containingRuns
-            .map((run) => {
-                const area = run.viewportRect.width * run.viewportRect.height;
-                const centerX = run.viewportRect.left + run.viewportRect.width / 2;
-                const centerY = run.viewportRect.top + run.viewportRect.height / 2;
-                const centerDist = Math.hypot(centerX - x, centerY - y);
-                return { run, area, centerDist };
-            })
-            .sort((a, b) => {
-                if (a.area !== b.area) return a.area - b.area;
-                return a.centerDist - b.centerDist;
-            });
-
-        return { run: ranked[0].run, distance: 0 };
-    }
-
-    let bestRun: TextRun | null = null;
+    let closest: TextRun | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const run of runs) {
-        const distance = pointToRectDistance(x, y, run.viewportRect);
-        if (distance < bestDistance) {
-            bestDistance = distance;
-            bestRun = run;
+        const dx = Math.max(run.pdfX - pdfPoint.x, 0, pdfPoint.x - (run.pdfX + run.width));
+        const dy = Math.max(run.pdfY - pdfPoint.y, 0, pdfPoint.y - (run.pdfY + run.height));
+        const dist = Math.hypot(dx, dy);
+        if (dist < bestDistance) {
+            bestDistance = dist;
+            closest = run;
         }
     }
 
-    if (!bestRun) return null;
-    return { run: bestRun, distance: bestDistance };
-};
-
-export const hitTestTextRun = (
-    index: PageTextIndex | undefined,
-    clickX: number,
-    clickY: number,
-    maxDistance = 8,
-): HitTestResult | null => {
-    if (!index) return null;
-
-    const result = pickClosestRun(clickX, clickY, index.runs);
-    if (!result) return null;
-
-    return result.distance <= maxDistance ? result : null;
+    if (closest && bestDistance <= tolerance) return closest;
+    return null;
 };

@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import { avniEngine } from '../src/engine/core/Orchestrator';
 import { PDFEditProcessor } from '../src/engine/processors/PDFEditProcessor';
 import { AvniDocument } from '../src/engine/types';
-import { PDFEditOperation } from '../src/engine/editor/types';
-import { hitTestTextRun } from '../src/engine/editor/hitTest';
-import { PageTextIndex } from '../src/engine/editor/textModel';
-import { screenRectToPdfRect, screenToPdfPoint } from '../src/engine/editor/coordinates';
+import { PDFEditOperation, TextRun } from '../src/engine/editor/types';
+import { buildPageTextRuns } from '../src/engine/editor/textRunExtractor';
+import { hitTestTextRuns } from '../src/engine/editor/hitTest';
+import { pdfToContainer, screenToPdf } from '../src/engine/editor/coordinates';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf-workers/pdf.worker.min.js';
 
@@ -23,52 +23,25 @@ type PageMeta = {
 
 type ActiveInlineEditor = {
     pageIndex: number;
-    runId: string;
     value: string;
-    left: number;
-    top: number;
+    pdfX: number;
+    pdfY: number;
+    pdfBaselineY: number;
     width: number;
     height: number;
     fontSize: number;
-    pdfRect: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    };
-    baselineY: number;
-    font: {
-        cssFamily?: string;
-        pdfName?: string;
-        sizePt: number;
-        weight?: string;
-        color?: {
-            r: number;
-            g: number;
-            b: number;
-        };
-        lineHeight?: number;
-        charSpacing?: number;
-    };
+    containerX: number;
+    containerY: number;
+    screenWidth: number;
+    screenHeight: number;
 };
 
-const parseCssColor = (cssColor: string): { r: number; g: number; b: number } | undefined => {
-    const match = cssColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-    if (!match) return undefined;
-
-    return {
-        r: Number(match[1]) / 255,
-        g: Number(match[2]) / 255,
-        b: Number(match[3]) / 255,
-    };
-};
-
-const mapCssFontToPdfName = (fontFamily: string): string | undefined => {
-    const family = fontFamily.toLowerCase();
-    if (family.includes('times')) return 'Times-Roman';
-    if (family.includes('courier')) return 'Courier';
-    if (family.includes('helvetica') || family.includes('arial')) return 'Helvetica';
-    return undefined;
+type SelectionBox = {
+    pageIndex: number;
+    startPdfX: number;
+    startPdfY: number;
+    endPdfX: number;
+    endPdfY: number;
 };
 
 const buildDoc = (blob: Blob, name: string): AvniDocument => ({
@@ -92,10 +65,16 @@ const PDFEditorEngine = () => {
     const [insertFontSize, setInsertFontSize] = useState(14);
     const [scale] = useState(1.4);
     const [pageMeta, setPageMeta] = useState<Record<number, PageMeta>>({});
-    const [pageTextIndex, setPageTextIndex] = useState<Record<number, PageTextIndex>>({});
     const [activeInlineEditor, setActiveInlineEditor] = useState<ActiveInlineEditor | null>(null);
     const inlineEditorRef = useRef<HTMLTextAreaElement | null>(null);
     const pageContainerRefs = useRef<Record<number, HTMLDivElement | null>>({});
+    const pageTextRunsRef = useRef<Record<number, TextRun[]>>({});
+
+    // Selection & drag-to-select tracking
+    const [selectedRuns, setSelectedRuns] = useState<TextRun[]>([]);
+    const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef<{ pageIndex: number; pdfX: number; pdfY: number } | null>(null);
 
     const [rotateDegrees, setRotateDegrees] = useState<90 | 180 | 270>(90);
     const [pageOpIndex, setPageOpIndex] = useState(0);
@@ -116,9 +95,7 @@ const PDFEditorEngine = () => {
 
     useEffect(() => {
         return () => {
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
-            }
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
         };
     }, [previewUrl]);
 
@@ -158,7 +135,7 @@ const PDFEditorEngine = () => {
             setMessage(
                 `Applied ${operation.type}. Size ${((last.metrics?.originalSize ?? 0) / 1024).toFixed(1)}KB → ${
                     ((last.metrics?.newSize ?? 0) / 1024).toFixed(1)
-                }KB`
+                }KB`,
             );
         } catch (error: unknown) {
             setMessage(error instanceof Error ? error.message : 'Operation failed');
@@ -178,162 +155,246 @@ const PDFEditorEngine = () => {
         URL.revokeObjectURL(url);
     };
 
+    const loadTextRuns = async (page: any, pageIndex: number) => {
+        const meta = pageMeta[pageIndex];
+        if (!meta) return;
+
+        try {
+            const textContent = await page.getTextContent();
+            const runs = buildPageTextRuns(pageIndex, meta.height, textContent.items ?? []);
+            pageTextRunsRef.current[pageIndex] = runs;
+        } catch (error) {
+            console.error('Failed to read text content for page', pageIndex, error);
+        }
+    };
+
     const handleAddTextAtClick = async (event: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
         if (!activeBlob || tool !== 'add-text') return;
 
         const meta = pageMeta[pageIndex];
         if (!meta) return;
+        const container = pageContainerRefs.current[pageIndex];
+        if (!container) return;
 
-        const rect = event.currentTarget.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const clickY = event.clientY - rect.top;
-
-        const nearestRun = hitTestTextRun(pageTextIndex[pageIndex], clickX, clickY, 36)?.run;
-
-        const pdfPoint = screenToPdfPoint({ x: clickX, y: clickY }, meta.height, scale);
-        const pdfX = pdfPoint.x;
-        const pdfY = nearestRun ? nearestRun.pdfRect.y : meta.height - clickY / scale;
-        const fontSize = nearestRun ? nearestRun.fontSize : insertFontSize;
+        const rect = container.getBoundingClientRect();
+        const pdfPoint = screenToPdf(event.clientX, event.clientY, rect, scale, meta.height);
 
         await runOperation({
             type: 'insert-text',
             pageIndex,
             text: insertText,
-            x: pdfX,
-            y: pdfY,
-            size: fontSize,
+            x: pdfPoint.x,
+            y: pdfPoint.y,
+            size: insertFontSize,
         });
     };
 
     const handleEditTextAtClick = (event: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
         if (tool !== 'edit-text') return;
+        const meta = pageMeta[pageIndex];
+        const container = pageContainerRefs.current[pageIndex];
+        if (!meta || !container) return;
 
-        const rect = event.currentTarget.getBoundingClientRect();
-        const clickX = event.clientX - rect.left;
-        const clickY = event.clientY - rect.top;
+        const rect = container.getBoundingClientRect();
+        const pdfPoint = screenToPdf(event.clientX, event.clientY, rect, scale, meta.height);
+        const hit = hitTestTextRuns(pdfPoint, pageTextRunsRef.current[pageIndex], 6);
 
-        const hit = hitTestTextRun(pageTextIndex[pageIndex], clickX, clickY, 10);
         if (!hit) {
             setMessage('No text found at click position. Try clicking directly on text.');
             return;
         }
 
+        // Top-left of the run in container-relative pixels (position: absolute)
+        const pos = pdfToContainer(hit.pdfX, hit.pdfY + hit.height, scale, meta.height);
+
         setActiveInlineEditor({
             pageIndex,
-            runId: hit.run.id,
-            value: hit.run.text,
-            left: hit.run.viewportRect.left,
-            top: hit.run.viewportRect.top,
-            width: Math.max(40, hit.run.viewportRect.width + 6),
-            height: Math.max(20, hit.run.viewportRect.height + 6),
-            fontSize: hit.run.fontSize,
-            pdfRect: hit.run.pdfRect,
-            baselineY: hit.run.pdfBaseline.y,
-            font: hit.run.font,
+            value: hit.text,
+            pdfX: hit.pdfX,
+            pdfY: hit.pdfY,
+            pdfBaselineY: hit.pdfBaselineY,
+            width: hit.width,
+            height: hit.height,
+            fontSize: hit.fontSize,
+            containerX: pos.x,
+            containerY: pos.y,
+            screenWidth: Math.max(80, hit.width * scale + 8),
+            screenHeight: Math.max(20, hit.height * scale + 4),
         });
     };
 
     const commitInlineEdit = async () => {
         if (!activeInlineEditor) return;
-
         const editor = activeInlineEditor;
         setActiveInlineEditor(null);
 
         await runOperation({
             type: 'replace-text',
             pageIndex: editor.pageIndex,
-            x: editor.pdfRect.x,
-            y: editor.pdfRect.y,
-            width: editor.pdfRect.width,
-            height: Math.max(8, editor.pdfRect.height),
-            baselineY: editor.baselineY,
+            x: editor.pdfX,
+            y: editor.pdfY,
+            width: editor.width,
+            height: Math.max(8, editor.height),
+            baselineY: editor.pdfBaselineY,
             newText: editor.value,
-            size: editor.font.sizePt,
-            font: editor.font,
-            color: editor.font.color,
+            size: editor.fontSize,
         });
     };
 
-    const collectTextLayerFromDom = (pageIndex: number) => {
+    // Helper: Get all text runs within a selection box (in PDF space)
+    const getRunsInSelection = (pageIndex: number, box: SelectionBox): TextRun[] => {
+        const runs = pageTextRunsRef.current[pageIndex];
+        if (!runs) return [];
+
+        const minX = Math.min(box.startPdfX, box.endPdfX);
+        const maxX = Math.max(box.startPdfX, box.endPdfX);
+        const minY = Math.min(box.startPdfY, box.endPdfY);
+        const maxY = Math.max(box.startPdfY, box.endPdfY);
+
+        return runs.filter(
+            (run) =>
+                run.pdfX < maxX &&
+                run.pdfX + run.width > minX &&
+                run.pdfY < maxY &&
+                run.pdfY + run.height > minY,
+        );
+    };
+
+    // Handler: Mouse down - start selection drag
+    const handlePageMouseDown = (event: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+        if (tool !== 'edit-text' || event.button !== 0) return; // left-click only
+        event.preventDefault();
+
+        const meta = pageMeta[pageIndex];
+        const container = pageContainerRefs.current[pageIndex];
+        if (!meta || !container) return;
+
+        const rect = container.getBoundingClientRect();
+        const pdfPoint = screenToPdf(event.clientX, event.clientY, rect, scale, meta.height);
+
+        dragStartRef.current = { pageIndex, pdfX: pdfPoint.x, pdfY: pdfPoint.y };
+        setSelectionBox({
+            pageIndex,
+            startPdfX: pdfPoint.x,
+            startPdfY: pdfPoint.y,
+            endPdfX: pdfPoint.x,
+            endPdfY: pdfPoint.y,
+        });
+        setIsDragging(true);
+        setSelectedRuns([]);
+        setActiveInlineEditor(null);
+    };
+
+    // Handler: Mouse move - update selection box
+    const handlePageMouseMove = (event: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+        if (!isDragging || !dragStartRef.current || dragStartRef.current.pageIndex !== pageIndex) return;
+
+        const meta = pageMeta[pageIndex];
+        const container = pageContainerRefs.current[pageIndex];
+        if (!meta || !container) return;
+
+        const rect = container.getBoundingClientRect();
+        const pdfPoint = screenToPdf(event.clientX, event.clientY, rect, scale, meta.height);
+
+        const newBox: SelectionBox = {
+            pageIndex,
+            startPdfX: dragStartRef.current.pdfX,
+            startPdfY: dragStartRef.current.pdfY,
+            endPdfX: pdfPoint.x,
+            endPdfY: pdfPoint.y,
+        };
+        setSelectionBox(newBox);
+    };
+
+    // Handler: Mouse up - finalize selection
+    const handlePageMouseUp = (event: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+        if (!isDragging || !selectionBox || selectionBox.pageIndex !== pageIndex) {
+            setIsDragging(false);
+            return;
+        }
+
+        const runs = getRunsInSelection(pageIndex, selectionBox);
+        setSelectedRuns(runs);
+        setIsDragging(false);
+
+        if (runs.length > 0) {
+            setMessage(`Selected ${runs.length} text run(s). Click to edit or press Delete to remove.`);
+        } else {
+            setMessage('No text selected. Try dragging across text.');
+            setSelectionBox(null);
+        }
+    };
+
+    // Handler: Edit selected text (open inline editor)
+    const handleEditSelected = () => {
+        if (selectedRuns.length === 0 || !selectionBox) return;
+
+        // Sort runs by position for proper concatenation
+        const sorted = [...selectedRuns].sort((a, b) => {
+            if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex;
+            if (Math.abs(b.pdfY - a.pdfY) > 10) return b.pdfY - a.pdfY; // Different rows
+            return a.pdfX - b.pdfX; // Same row, left to right
+        });
+
+        const pageIndex = sorted[0].pageIndex;
+        const meta = pageMeta[pageIndex];
+        const container = pageContainerRefs.current[pageIndex];
+        if (!meta || !container) return;
+
+        const concatenatedText = sorted.map((r) => r.text).join(' ');
+        const minX = Math.min(...sorted.map((r) => r.pdfX));
+        const minY = Math.min(...sorted.map((r) => r.pdfY));
+        const maxX = Math.max(...sorted.map((r) => r.pdfX + r.width));
+        const maxY = Math.max(...sorted.map((r) => r.pdfY + r.height));
+        const avgFontSize = sorted.reduce((sum, r) => sum + r.fontSize, 0) / sorted.length;
+        const avgBaselineY = sorted.reduce((sum, r) => sum + r.pdfBaselineY, 0) / sorted.length;
+
+        const pos = pdfToContainer(minX, minY + (maxY - minY), scale, meta.height);
+
+        setActiveInlineEditor({
+            pageIndex,
+            value: concatenatedText,
+            pdfX: minX,
+            pdfY: minY,
+            pdfBaselineY: avgBaselineY,
+            width: maxX - minX,
+            height: maxY - minY,
+            fontSize: avgFontSize,
+            containerX: pos.x,
+            containerY: pos.y,
+            screenWidth: Math.max(150, (maxX - minX) * scale + 12),
+            screenHeight: Math.max(30, (maxY - minY) * scale + 8),
+        });
+
+        setSelectedRuns([]);
+        setSelectionBox(null);
+    };
+
+    // Handler: Delete selected (redact area)
+    const handleDeleteSelected = async () => {
+        if (selectedRuns.length === 0 || !selectionBox) return;
+
+        const pageIndex = selectionBox.pageIndex;
         const meta = pageMeta[pageIndex];
         if (!meta) return;
 
-        const container = pageContainerRefs.current[pageIndex];
-        if (!container) return;
+        const minX = Math.min(selectionBox.startPdfX, selectionBox.endPdfX);
+        const maxX = Math.max(selectionBox.startPdfX, selectionBox.endPdfX);
+        const minY = Math.min(selectionBox.startPdfY, selectionBox.endPdfY);
+        const maxY = Math.max(selectionBox.startPdfY, selectionBox.endPdfY);
 
-        const layer = container.querySelector('.react-pdf__Page__textContent');
-        if (!layer) return;
+        setSelectedRuns([]);
+        setSelectionBox(null);
 
-        const containerRect = container.getBoundingClientRect();
-        const spans = Array.from(layer.querySelectorAll('span'));
-
-        const runs = spans
-            .map((span, index) => {
-                const text = span.textContent?.trim() ?? '';
-                if (!text) return null;
-
-                const rect = span.getBoundingClientRect();
-                const left = rect.left - containerRect.left;
-                const top = rect.top - containerRect.top;
-                const width = rect.width;
-                const height = rect.height;
-
-                if (width < 1 || height < 1) return null;
-
-                const fontSizePx = Number.parseFloat(window.getComputedStyle(span).fontSize) || 12;
-                const style = window.getComputedStyle(span);
-                const lineHeightPx = Number.parseFloat(style.lineHeight);
-
-                const pdfRect = screenRectToPdfRect(
-                    {
-                        left,
-                        top,
-                        width,
-                        height,
-                    },
-                    meta.height,
-                    scale,
-                );
-
-                return {
-                    id: `${pageIndex}-dom-${index}-${Math.round(left)}-${Math.round(top)}`,
-                    pageIndex,
-                    text,
-                    viewportRect: {
-                        left,
-                        top,
-                        width,
-                        height,
-                    },
-                    pdfRect,
-                    pdfBaseline: {
-                        x: pdfRect.x,
-                        y: meta.height - (top + height) / scale,
-                    },
-                    fontSize: Math.max(8, fontSizePx / scale),
-                    font: {
-                        cssFamily: style.fontFamily,
-                        pdfName: mapCssFontToPdfName(style.fontFamily),
-                        sizePt: Math.max(8, fontSizePx / scale),
-                        weight: style.fontWeight,
-                        color: parseCssColor(style.color),
-                        lineHeight: Number.isFinite(lineHeightPx) ? lineHeightPx / scale : undefined,
-                    },
-                };
-            })
-            .filter((run): run is NonNullable<typeof run> => run !== null);
-
-        const textIndex: PageTextIndex = {
+        await runOperation({
+            type: 'redact-area',
             pageIndex,
-            pageWidth: meta.width,
-            pageHeight: meta.height,
-            runs,
-        };
-
-        setPageTextIndex((prev) => ({
-            ...prev,
-            [pageIndex]: textIndex,
-        }));
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+            color: { r: 0, g: 0, b: 0 },
+        });
     };
 
     return (
@@ -350,7 +411,7 @@ const PDFEditorEngine = () => {
                             setSourceFile(next);
                             setWorkingBlob(next);
                             setPageMeta({});
-                            setPageTextIndex({});
+                            pageTextRunsRef.current = {};
                             setActiveInlineEditor(null);
                             setMessage(next ? 'PDF loaded into editor engine.' : '');
                         }}
@@ -410,7 +471,11 @@ const PDFEditorEngine = () => {
                             </div>
 
                             <p className="text-sm" style={{ color: 'var(--footer-muted)' }}>
-                                Mode: <strong>{tool === 'edit-text' ? 'Edit Text' : 'Add Text'}</strong>. Click directly on the PDF preview.
+                                Mode: <strong>{tool === 'edit-text' ? 'Edit Text' : 'Add Text'}</strong>. 
+                                {tool === 'edit-text' 
+                                    ? ' Drag to select text (or click a single text run), then click Edit in the popup toolbar or use the inline editor.'
+                                    : ' Click on the PDF to insert new text at that location.'
+                                }
                             </p>
                         </div>
 
@@ -478,14 +543,20 @@ const PDFEditorEngine = () => {
                                             ref={(element) => {
                                                 pageContainerRefs.current[index] = element;
                                             }}
+                                            onMouseDown={(e) => handlePageMouseDown(e, index)}
+                                            onMouseMove={(e) => handlePageMouseMove(e, index)}
+                                            onMouseUp={(e) => handlePageMouseUp(e, index)}
                                             onClick={(event) => {
                                                 if (tool === 'add-text') {
                                                     handleAddTextAtClick(event, index);
                                                     return;
                                                 }
-                                                handleEditTextAtClick(event, index);
+                                                // Single click on text when not dragging
+                                                if (!isDragging && selectedRuns.length === 0) {
+                                                    handleEditTextAtClick(event, index);
+                                                }
                                             }}
-                                            style={{ cursor: tool === 'add-text' ? 'crosshair' : 'text' }}
+                                            style={{ cursor: tool === 'add-text' ? 'crosshair' : 'text', userSelect: 'none' }}
                                         >
                                             <Page
                                                 pageNumber={index + 1}
@@ -501,52 +572,147 @@ const PDFEditorEngine = () => {
                                                             height: viewport.height,
                                                         },
                                                     }));
-                                                }}
-                                                onRenderTextLayerSuccess={() => {
-                                                    window.requestAnimationFrame(() => {
-                                                        collectTextLayerFromDom(index);
-                                                    });
+                                                    void loadTextRuns(page, index);
                                                 }}
                                             />
 
-                                            {activeInlineEditor && activeInlineEditor.pageIndex === index && (
+                                            {/* Selection highlight overlay */}
+                                            {selectionBox && selectionBox.pageIndex === index && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        top: 0,
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        pointerEvents: 'none',
+                                                        zIndex: 10,
+                                                    }}
+                                                >
+                                                    {selectedRuns.map((run, i) => {
+                                                        const pos = pdfToContainer(run.pdfX, run.pdfY + run.height, scale, pageMeta[index]?.height || 792);
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    left: `${pos.x}px`,
+                                                                    top: `${pos.y - run.height * scale}px`,
+                                                                    width: `${run.width * scale}px`,
+                                                                    height: `${run.height * scale}px`,
+                                                                    background: 'rgba(59, 130, 246, 0.3)',
+                                                                    border: '2px solid rgb(59, 130, 246)',
+                                                                    borderRadius: '2px',
+                                                                }}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* Selection toolbar */}
+                                            {selectedRuns.length > 0 && selectionBox?.pageIndex === index && (
+                                                <div
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '4px',
+                                                        right: '4px',
+                                                        background: 'white',
+                                                        border: '1px solid #999',
+                                                        borderRadius: '4px',
+                                                        padding: '6px',
+                                                        zIndex: 100,
+                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                                        display: 'flex',
+                                                        gap: '4px',
+                                                    }}
+                                                >
+                                                    <button
+                                                        onClick={() => handleEditSelected()}
+                                                        style={{
+                                                            padding: '4px 8px',
+                                                            fontSize: '12px',
+                                                            background: '#3B82F6',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '3px',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteSelected()}
+                                                        style={{
+                                                            padding: '4px 8px',
+                                                            fontSize: '12px',
+                                                            background: '#EF4444',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '3px',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedRuns([]);
+                                                            setSelectionBox(null);
+                                                        }}
+                                                        style={{
+                                                            padding: '4px 8px',
+                                                            fontSize: '12px',
+                                                            background: '#999',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '3px',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {activeInlineEditor?.pageIndex === index && (
                                                 <textarea
                                                     ref={inlineEditorRef}
+                                                    autoFocus
                                                     value={activeInlineEditor.value}
-                                                    onMouseDown={(event) => event.stopPropagation()}
-                                                    onClick={(event) => event.stopPropagation()}
-                                                    onChange={(event) => {
-                                                        setActiveInlineEditor((prev) => {
-                                                            if (!prev) return prev;
-                                                            return { ...prev, value: event.target.value };
-                                                        });
+                                                    onMouseDown={(e) => e.stopPropagation()}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setActiveInlineEditor((prev) => (prev ? { ...prev, value: val } : prev));
                                                     }}
                                                     onBlur={() => {
-                                                        void commitInlineEdit();
+                                                        setTimeout(() => {
+                                                            if (document.activeElement !== inlineEditorRef.current) {
+                                                                void commitInlineEdit();
+                                                            }
+                                                        }, 150);
                                                     }}
-                                                    onKeyDown={(event) => {
-                                                        if (event.key === 'Enter' && !event.shiftKey) {
-                                                            event.preventDefault();
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                                            e.preventDefault();
                                                             void commitInlineEdit();
                                                         }
-                                                        if (event.key === 'Escape') {
+                                                        if (e.key === 'Escape') {
                                                             setActiveInlineEditor(null);
                                                         }
                                                     }}
-                                                    className="absolute z-20 resize-none border rounded px-1 py-0.5"
+                                                    className="absolute z-50 resize-none border border-blue-400 rounded px-1 py-0.5 shadow-lg"
                                                     style={{
-                                                        left: `${activeInlineEditor.left}px`,
-                                                        top: `${activeInlineEditor.top}px`,
-                                                        width: `${activeInlineEditor.width}px`,
-                                                        minHeight: `${activeInlineEditor.height}px`,
-                                                        fontSize: `${activeInlineEditor.font.sizePt * scale}px`,
-                                                        lineHeight: activeInlineEditor.font.lineHeight ? `${activeInlineEditor.font.lineHeight * scale}px` : 1.2,
-                                                        fontFamily: activeInlineEditor.font.cssFamily,
-                                                        fontWeight: activeInlineEditor.font.weight,
+                                                        left: `${activeInlineEditor.containerX}px`,
+                                                        top: `${activeInlineEditor.containerY}px`,
+                                                        width: `${activeInlineEditor.screenWidth}px`,
+                                                        minHeight: `${activeInlineEditor.screenHeight}px`,
+                                                        fontSize: `${activeInlineEditor.fontSize * scale}px`,
+                                                        lineHeight: 1.2,
                                                         background: 'rgba(255,255,255,0.95)',
-                                                        color: activeInlineEditor.font.color
-                                                            ? `rgb(${Math.round(activeInlineEditor.font.color.r * 255)}, ${Math.round(activeInlineEditor.font.color.g * 255)}, ${Math.round(activeInlineEditor.font.color.b * 255)})`
-                                                            : '#111827',
+                                                        color: '#111827',
+                                                        pointerEvents: 'auto',
                                                     }}
                                                 />
                                             )}

@@ -1,4 +1,4 @@
-import { PageTextIndex, TextRun } from './textModel';
+import { TextRun } from './types';
 
 type TextItemLike = {
     str?: string;
@@ -7,74 +7,37 @@ type TextItemLike = {
     height?: number;
 };
 
-const toRun = (
-    pageIndex: number,
-    itemIndex: number,
-    item: TextItemLike,
-    scale: number,
-    pageHeight: number,
-): TextRun | null => {
-    if (!item.str || !item.transform) return null;
+const toRun = (pageIndex: number, item: TextItemLike, pageHeight: number): TextRun | null => {
+    if (!item.str?.trim() || !item.transform) return null;
 
-    const left = item.transform[4] ?? 0;
-    const baseY = item.transform[5] ?? 0;
-    const height = Math.max(8, item.height ?? 10);
-    const width = Math.max(3, item.width ?? item.str.length * 6);
-    const top = baseY - height;
-
-    const pdfX = left / scale;
-    const pdfTop = top / scale;
-    const pdfY = pageHeight - (pdfTop + height / scale);
-    const pdfWidth = width / scale;
-    const pdfHeight = height / scale;
+    const pdfX = item.transform[4] ?? 0;
+    const pdfBaselineY = item.transform[5] ?? 0;
+    const fontSize = Math.max(6, Math.abs(item.transform[3] ?? 10));
+    const pdfWidth = Math.max(3, item.width ?? item.str.length * fontSize * 0.6);
+    const pdfHeight = Math.max(6, item.height ?? fontSize);
+    const pdfY = pdfBaselineY - pdfHeight * 0.2; // bottom of run, slightly below baseline
 
     return {
-        id: `${pageIndex}-${itemIndex}-${left}-${top}`,
         pageIndex,
         text: item.str,
-        viewportRect: {
-            left,
-            top,
-            width,
-            height,
-        },
-        pdfRect: {
-            x: pdfX,
-            y: pdfY,
-            width: pdfWidth,
-            height: pdfHeight,
-        },
-        fontSize: Math.max(8, pdfHeight * 0.8),
+        pdfX,
+        pdfY,
+        pdfBaselineY,
+        width: pdfWidth,
+        height: pdfHeight,
+        fontSize,
     };
 };
 
-export const buildPageTextIndex = (
+export const buildPageTextRuns = (
     pageIndex: number,
-    pageWidth: number,
     pageHeight: number,
     items: unknown[],
-    scale: number,
-): PageTextIndex => {
+): TextRun[] => {
     const runs: TextRun[] = [];
-
-    for (let index = 0; index < items.length; index += 1) {
-        const run = toRun(
-            pageIndex,
-            index,
-            items[index] as TextItemLike,
-            scale,
-            pageHeight,
-        );
-
-        if (run) {
-            runs.push(run);
-        }
+    for (const item of items) {
+        const run = toRun(pageIndex, item as TextItemLike, pageHeight);
+        if (run) runs.push(run);
     }
-
-    return {
-        pageIndex,
-        pageWidth,
-        pageHeight,
-        runs,
-    };
+    return runs;
 };

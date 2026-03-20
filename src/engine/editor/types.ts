@@ -14,6 +14,17 @@ export type PDFFontSpec = {
     charSpacing?: number;
 };
 
+export type TextRun = {
+    text: string;
+    pdfX: number;
+    pdfY: number; // bottom-left origin in PDF points
+    width: number;
+    height: number;
+    fontSize: number;
+    pdfBaselineY: number;
+    pageIndex: number;
+};
+
 export type InsertTextOperation = {
     type: 'insert-text';
     pageIndex: number;

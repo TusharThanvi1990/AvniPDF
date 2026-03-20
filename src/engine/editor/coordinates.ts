@@ -1,58 +1,30 @@
-export type ScreenPoint = {
-    x: number;
-    y: number;
-};
+export type ScreenPoint = { x: number; y: number };
+export type PdfPoint = { x: number; y: number };
 
-export type PdfPoint = {
-    x: number;
-    y: number;
-};
-
-export type ScreenRect = {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-};
-
-export type PdfRect = {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-};
-
-export const screenToPdfPoint = (
-    point: ScreenPoint,
-    pageHeightPoints: number,
+export const screenToPdf = (
+    clientX: number,
+    clientY: number,
+    canvasRect: DOMRect,
     scale: number,
+    pageHeightPoints: number,
 ): PdfPoint => {
+    const canvasX = clientX - canvasRect.left;
+    const canvasY = clientY - canvasRect.top;
     return {
-        x: point.x / scale,
-        y: pageHeightPoints - point.y / scale,
+        x: canvasX / scale,
+        y: pageHeightPoints - canvasY / scale,
     };
 };
 
-export const screenRectToPdfRect = (
-    rect: ScreenRect,
-    pageHeightPoints: number,
+// Returns position relative to the page container div (for position: absolute child)
+export const pdfToContainer = (
+    pdfX: number,
+    pdfY: number,
     scale: number,
-): PdfRect => {
-    const x = rect.left / scale;
-    const width = rect.width / scale;
-    const height = rect.height / scale;
-    const y = pageHeightPoints - (rect.top + rect.height) / scale;
-
-    return { x, y, width, height };
-};
-
-export const pdfPointToScreenPoint = (
-    point: PdfPoint,
     pageHeightPoints: number,
-    scale: number,
 ): ScreenPoint => {
     return {
-        x: point.x * scale,
-        y: (pageHeightPoints - point.y) * scale,
+        x: pdfX * scale,
+        y: (pageHeightPoints - pdfY) * scale,
     };
 };
